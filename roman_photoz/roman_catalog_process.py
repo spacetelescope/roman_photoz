@@ -1,14 +1,16 @@
 ### COSMOS example with rail+lephare ###
+import json
 import sys
 from rail.estimation.algos.lephare import LephareInformer, LephareEstimator
 import numpy as np
 import lephare as lp
 from rail.core.stage import RailStage
-import matplotlib.pyplot as plt
 from astropy.table import Table
 from collections import OrderedDict
 import os
 from pathlib import Path
+from default_config_file import default_roman_config
+from typing import Union
 
 
 DS = RailStage.data_store
@@ -16,16 +18,11 @@ DS.__class__.allow_overwrite = True
 
 
 class RomanCatalogProcess:
+
     def __init__(self, config_filename: str = ""):
         self.data: dict = OrderedDict()
         # set configuration file (roman will have its own)
-        if config_filename == "":
-            self.config = lp.default_cosmos_config
-        else:
-            # read custom config file
-            self.config = config_filename
-        # set redshift grid (step, z_i, z_f)
-        self.config["Z_STEP"] = ".1,0.,7."
+        self.set_config_file(config_filename)
         # max number of objects to process from input catalog
         # TODO: remove object limit
         self.nobj = 100
@@ -34,6 +31,19 @@ class RomanCatalogProcess:
         self.flux_err_cols: list = []
         self.inform_stage = None
         self.estimated = None
+
+    def set_config_file(self, config_filename: Union[dict, str] = ""):
+        if isinstance(config_filename, str):
+            if config_filename:
+                # a config filename was provided in JSON format
+                with open(config_filename, "r") as f:
+                    self.config = json.load(f)
+            else:
+                # use default Roman config file
+                self.config = default_roman_config
+        else:
+            # a config was provided in dict format
+            self.config = config_filename
 
     def get_data(self, input_filename: str = "", input_path=""):
         # N.B.: This is the method that will fetch multiband
@@ -124,9 +134,9 @@ if __name__ == "__main__":
     # get config file
     config_filename = sys.argv[1] if len(sys.argv) > 1 else ""
     # get path where the results will be saved to
-    input_path = sys.argv[2] if len(sys.argv) > 2 else ""
+    input_path = sys.argv[2] if len(sys.argv) > 2 else "examples"
     # get effective area filename
-    input_filename = sys.argv[3] if len(sys.argv) > 3 else ""
+    input_filename = sys.argv[3] if len(sys.argv) > 3 else "roman_simulated_catalog.in"
 
     rcp = RomanCatalogProcess(config_filename=config_filename)
 
