@@ -1,43 +1,66 @@
 ### COSMOS example with rail+lephare ###
 
-from rail.estimation.algos.lephare import LephareInformer, LephareEstimator
-import numpy as np
-import lephare as lp
-from rail.core.stage import RailStage
-import matplotlib.pyplot as plt
-from astropy.table import Table
-from collections import OrderedDict
+import argparse
 import os
-from .default_config_file import default_roman_config
+from collections import OrderedDict
 from pathlib import Path
 
+import lephare as lp
+import numpy as np
 from numpy.lib import recfunctions as rfn
+from rail.core.stage import RailStage
+
+from . import create_roman_filters
+from .default_config_file import default_roman_config
 
 ROMAN_DEFAULT_CONFIG = default_roman_config
 
 DS = RailStage.data_store
 DS.__class__.allow_overwrite = True
 
+LEPHAREDIR = os.environ.get("LEPHAREDIR", lp.LEPHAREDIR)
+LEPHAREWORK = os.environ.get(
+    "LEPHAREWORK", (Path(LEPHAREDIR).parent / "work").as_posix()
+)
+CWD = os.getcwd()
+DEFAULT_OUTPUT_CATALOG_FILENAME = "roman_simulated_catalog.in"
+
 
 class SimulatedCatalog:
+    """
+    A class to create a simulated catalog using the Roman telescope data.
+
+    Attributes
+    ----------
+    data : OrderedDict
+        A dictionary to store the data.
+    lephare_config : dict
+        Configuration for LePhare.
+    nobj : int
+        Maximum number of objects to process from input catalog.
+    flux_cols : list
+        List of flux columns.
+    flux_err_cols : list
+        List of flux error columns.
+    inform_stage : None
+        Placeholder for inform stage.
+    estimated : None
+        Placeholder for estimated data.
+    filter_lib : None
+        Placeholder for filter library.
+    simulated_data_filename : str
+        Filename for the simulated data.
+    simulated_data : None
+        Placeholder for simulated data.
+    """
+
     def __init__(self):
+        """
+        Initializes the SimulatedCatalog class.
+        """
         self.data = OrderedDict()
-        # set configuration file (roman will have its own)
         self.lephare_config = ROMAN_DEFAULT_CONFIG
-
-        # change some of the default parameters
-        # set redshift grid (step, z_i, z_f)
-        self.lephare_config["Z_STEP"] = ".1,0.,7."
-        self.lephare_config["MOD_EXTINC"] = "18,26,26,33,26,33,26,33"
-        self.lephare_config["EXTINC_LAW"] = (
-            "SMC_prevot.dat,SB_calzetti.dat,SB_calzetti_bump1.dat,SB_calzetti_bump2.dat"
-        )
-        self.lephare_config["EM_LINES"] = "EMP_UV"
-        self.lephare_config["EM_DISPERSION"] = "0.5,1.,1.5"
-
-        # max number of objects to process from input catalog
         self.nobj = 100
-        # set attributes used for determining the redshift
         self.flux_cols = []
         self.flux_err_cols = []
         self.inform_stage = None
@@ -46,68 +69,57 @@ class SimulatedCatalog:
         self.simulated_data_filename = ""
         self.simulated_data = None
 
-    def get_data(self):
-        # N.B.: This is the method that will fetch multiband
-        # roman catalog when it is available by using
-        # the roman_catalog_handler.py module.
-        # For now, just for the sake of implementation, we'll
-        # be using data from the COSMOS example.
+    def is_folder_not_empty(self, folder_path: str, partial_text: str) -> bool:
+        """
+        Check if a folder exists and contains files with the specified partial text.
 
-        lp.data_retrieval.get_auxiliary_data(
-            keymap=self.lephare_config,
-            additional_files=["examples/COSMOS.in", "examples/output.para"],
-        )
+        Parameters
+        ----------
+        folder_path : str
+            The path to the folder.
+        partial_text : str
+            The partial text to look for in filenames.
 
-        bands = self.lephare_config["FILTER_LIST"].split(",")
-        print(len(bands))
-
-        # set limit to the first 100 objects
-        cosmos = Table.read(
-            os.path.join(lp.LEPHAREDIR, "examples/COSMOS.in"), format="ascii"
-        )[: self.nobj]
-
-        # loop over the filters we want to keep to get
-        # the number of the filter, n, and the name, b
-        for n, b in enumerate(bands):
-            flux = cosmos[cosmos.colnames[1 + 2 * n]]
-            flux_err = cosmos[cosmos.colnames[2 + 2 * n]]
-            self.data[f"flux_{b}"] = flux
-            self.flux_cols.append(f"flux_{b}")
-            self.data[f"flux_err_{b}"] = flux_err
-            self.flux_err_cols.append(f"flux_err_{b}")
-        self.data["redshift"] = np.array(cosmos[cosmos.colnames[-2]])
+        Returns
+        -------
+        bool
+            True if the folder exists and contains files with the partial text, False otherwise.
+        """
+        path = Path(folder_path)
+        if path.exists() and path.is_dir():
+            if any(path.glob(f"*{partial_text}*")):
+                return True
+        return False
 
     def get_filters(self):
+        """
+        Get the filter files for the Roman telescope.
+
+        If the filter files are not present, create them.
+        """
+        filter_files_present = self.is_folder_not_empty(
+            Path(self.lephare_config["FILTER_REP"], "roman"), "roman_"
+        )
+        if not filter_files_present:
+            create_roman_filters.run()
+
         self.filter_lib = lp.FilterSvc.from_keymap(
             lp.all_types_to_keymap(self.lephare_config)
         )
-        # plot filters transmission
-        # from matplotlib import pylab as plt
-        # fig = plt.figure(figsize=(15, 8))
-        # for f in filter_lib:
-        #     d = f.data()
-        #     plt.semilogx(d[0], d[1] / d[1].max())
         print(
-            f"Created filter library using the filter files in {self.lephare_config["FILTER_REP"]}."
+            f"Created filter library using the filter files in {self.lephare_config['FILTER_REP']}/roman."
         )
 
     def create_simulated_data(self):
-        star_overrides = {
-            # "STAR_LIB_IN": "LIB_STAR",
-            # "STAR_LIB_OUT": "ROMAN_SIMULATED_MAGS_STAR",
-            # "STAR_SED": "sed/STAR/STAR_MOD_ALL.list",
-            # "LIB_ASCII": "YES",
-        }
-        qso_overrides = {
-            # "QSO_LIB_IN": "LIB_QSO",
-            # "QSO_LIB_OUT": "ROMAN_SIMULATED_MAGS_QSO",
-            # "QSO_SED": "sed/QSO/SALVATO09/AGN_MOD.list",
-            # "LIB_ASCII": "YES",
-        }
+        """
+        Create simulated data using the LePhare configuration.
+        """
+        star_overrides = {}
+        qso_overrides = {}
         gal_overrides = {
             "GAL_LIB_IN": "LIB_CE",
-            "GAL_LIB_OUT": "ROMAN_SIMULATED_MAGS_GAL",
-            "GAL_SED": "examples/COSMOS_MOD.list",
+            "GAL_LIB_OUT": "ROMAN_SIMULATED_MAGS",
+            "GAL_SED": f"{LEPHAREDIR}/examples/COSMOS_MOD.list",
             "LIB_ASCII": "YES",
         }
 
@@ -120,9 +132,16 @@ class SimulatedCatalog:
 
         self.simulated_data_filename = gal_overrides.get("GAL_LIB_OUT")
 
-    def create_simulated_input_catalog(self):
+    def create_simulated_input_catalog(
+        self,
+        output_filename: str = DEFAULT_OUTPUT_CATALOG_FILENAME,
+        output_path: str = "",
+    ):
+        """
+        Create a simulated input catalog from the simulated data.
+        """
         catalog_name = Path(
-            lp.LEPHAREDIR, "WORK", "lib_mag", f"{self.simulated_data_filename}.dat"
+            LEPHAREWORK, "lib_mag", f"{self.simulated_data_filename}.dat"
         ).as_posix()
         colnames = self.create_header(catalog_name=catalog_name)
 
@@ -130,41 +149,60 @@ class SimulatedCatalog:
             catalog_name, dtype=None, names=colnames, encoding="utf-8"
         )
 
-        # select only the magnitude columns for the input catalog
+        # we're keeping only the columns with magnitude and true redshift information
         cols_to_keep = [
-            name for name in self.simulated_data.dtype.names if "mag" in name
+            name
+            for name in self.simulated_data.dtype.names
+            if "mag" in name or "redshift" in name
         ]
 
-        # grab only this many objects
         num_lines = 100
         random_lines = self.pick_random_lines(num_lines)
         catalog = random_lines[cols_to_keep]
 
-        # add a gaussian error to each magnitude column and the ID
         final_catalog = self.add_error(catalog)
         final_catalog = self.add_ids(final_catalog)
 
-        # add final piece of info necessary
-        # The context is a binary flag. Here we set it to use all filters.
-        context = np.full((num_lines), np.sum(2 ** np.arange(len(self.filter_lib))))
-        zspec = np.full((num_lines), np.nan)
-        string_data = np.full((num_lines), "arbitrary info")
+        context = np.full((num_lines), 0)
+        # zspec = np.full((num_lines), np.nan)
+        zspec = final_catalog["redshift"]
+        string_data = final_catalog["redshift"]
+
         final_catalog = rfn.append_fields(
             final_catalog, "context", context, usemask=False
         )
         final_catalog = rfn.append_fields(final_catalog, "zspec", zspec, usemask=False)
         final_catalog = rfn.append_fields(
-            final_catalog, "string_data", string_data, usemask=False
+            final_catalog, "z_true", string_data, usemask=False
         )
+        # remove the redshift column
+        final_catalog = rfn.drop_fields(final_catalog, ["redshift"])
 
-        self.save_catalog(final_catalog)
+        self.save_catalog(
+            final_catalog, output_path=output_path, output_filename=output_filename
+        )
 
         print("Done.")
 
     def save_catalog(
-        self, catalog=None, output_filename: str = "roman_simulated_catalog.in"
+        self,
+        catalog=None,
+        output_path: str = "",
+        output_filename: str = DEFAULT_OUTPUT_CATALOG_FILENAME,
     ):
+        """
+        Save the simulated input catalog to a file.
+
+        Parameters
+        ----------
+        catalog : np.ndarray, optional
+            The catalog data to save.
+        output_filename : str, optional
+            The filename to save the catalog to.
+        """
         if catalog is not None:
+            output_path = Path(output_path or LEPHAREWORK).as_posix()
+            output_filename = Path(output_path, output_filename).as_posix()
             np.savetxt(
                 output_filename,
                 catalog,
@@ -176,11 +214,22 @@ class SimulatedCatalog:
         print(f"Saved simulated input catalog to {output_filename}")
 
     def add_ids(self, catalog):
-        # Add an ID column with running integers starting at 1
+        """
+        Add an ID column to the catalog.
+
+        Parameters
+        ----------
+        catalog : np.ndarray
+            The catalog data.
+
+        Returns
+        -------
+        np.ndarray
+            The catalog data with an ID column added.
+        """
         ids = np.arange(1, len(catalog) + 1)
         catalog = rfn.append_fields(catalog, "id", ids, usemask=False)
 
-        # Move the ID column to the first position
         new_dtype = [("id", catalog["id"].dtype)] + [
             (name, catalog[name].dtype) for name in catalog.dtype.names if name != "id"
         ]
@@ -191,38 +240,61 @@ class SimulatedCatalog:
         return new_catalog
 
     def add_error(self, catalog):
-        # add corresponding error column
-        new_fields = []
+        """
+        Add a Gaussian error to each magnitude column in the catalog.
+
+        Parameters
+        ----------
+        catalog : np.ndarray
+            The catalog data.
+
+        Returns
+        -------
+        np.ndarray
+            The catalog data with error columns added.
+        """
+        rng = np.random.default_rng()
+        new_dtype = []
         for col in catalog.dtype.names:
+            new_dtype.append((col, catalog[col].dtype))
             if "mag" in col:
-                noise = np.abs(
-                    np.random.normal(loc=0, scale=0.1, size=catalog[col].shape)
+                new_dtype.append((f"{col}_err", catalog[col].dtype))
+
+        new_catalog = np.empty(catalog.shape, dtype=new_dtype)
+        for col in catalog.dtype.names:
+            new_catalog[col] = catalog[col]
+            if "mag" in col:
+                new_catalog[f"{col}_err"] = np.abs(
+                    rng.normal(loc=0, scale=0.1, size=catalog[col].shape)
                 )
-                new_fields.append((f"{col}_err", noise))
-
-            # Create a new structured array with the interleaved columns
-            new_dtype = []
-            for col in catalog.dtype.descr:
-                if "mag" in col[0]:
-                    new_dtype.append(col)
-                    new_dtype.append((f"{col[0]}_err", col[1]))
-
-            new_catalog = np.empty(catalog.shape, dtype=new_dtype)
-            for col in catalog.dtype.names:
-                new_catalog[col] = catalog[col]
-                if "mag" in col:
-                    new_catalog[f"{col}_err"] = noise
 
         return new_catalog
 
     def create_header(self, catalog_name: str):
+        """
+        Create the header for the catalog.
+
+        Parameters
+        ----------
+        catalog_name : str
+            The name of the catalog file.
+
+        Returns
+        -------
+        list
+            The list of column names for the catalog.
+        """
         filter_list = (
             self.lephare_config.get("FILTER_LIST")
             .replace(".pb", "")
             .replace("roman/roman_", "")
             .split(",")
         )
-        with open(catalog_name, "r") as f:
+        with open(catalog_name) as f:
+            # BEWARE of the format of LAPHEREWORK/lib_mag/ROMAN_SIMULATED_MAGS.dat!
+            # ignore the first N_filt lines in the file
+            # for _ in range(len(filter_list) + 1):
+            #     next(f)
             colname_list = f.readline().strip().split(" ")
         colnames = [x for x in colname_list if "vector" not in x]
         colvector = [x for x in colname_list if "vector" in x]
@@ -233,8 +305,6 @@ class SimulatedCatalog:
         ]
         colnames.extend(expanded_colvector)
 
-        # ignore comments and drop the age column
-        # (SED model used doesn't have that info)
         colnames = [x for x in colnames if "#" not in x]
         colnames = [x for x in colnames if "age" not in x]
         return colnames
@@ -264,21 +334,50 @@ class SimulatedCatalog:
                 f"Requested {num_lines} lines, but only {total_lines} lines are available."
             )
 
-        random_indices = np.random.choice(total_lines, num_lines, replace=False)
+        rng = np.random.default_rng()
+        random_indices = rng.choice(total_lines, num_lines, replace=False)
         return self.simulated_data[random_indices]
 
-    def process(self):
-        self.get_data()
+    def process(
+        self,
+        output_path: str = "",
+        output_filename: str = DEFAULT_OUTPUT_CATALOG_FILENAME,
+    ):
+        """
+        Run the process to create the simulated catalog.
+        """
         self.get_filters()
         self.create_simulated_data()
-        self.create_simulated_input_catalog()
+        self.create_simulated_input_catalog(
+            output_filename=output_filename, output_path=output_path
+        )
 
         print("DONE")
 
 
 if __name__ == "__main__":
 
+    def parse_args():
+        parser = argparse.ArgumentParser(
+            description="Create a simulated catalog using the Roman telescope data."
+        )
+        parser.add_argument(
+            "--output_path",
+            type=str,
+            default=LEPHAREWORK,
+            help="Path to save the output catalog.",
+        )
+        parser.add_argument(
+            "--output_filename",
+            type=str,
+            default=DEFAULT_OUTPUT_CATALOG_FILENAME,
+            help="Filename for the output catalog.",
+        )
+        return parser.parse_args()
+
+    args = parse_args()
+
     rcp = SimulatedCatalog()
-    rcp.process()
+    rcp.process(args.output_path, args.output_filename)
 
     print("Done.")

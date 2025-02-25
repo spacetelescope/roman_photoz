@@ -1,7 +1,9 @@
-from pathlib import Path
 import os
-from roman_datamodels import datamodels as rdm
+from pathlib import Path
+
 import numpy as np
+from roman_datamodels import datamodels as rdm
+
 from .default_config_file import default_roman_config
 
 
@@ -73,7 +75,6 @@ class RomanCatalogHandler:
         print(f"Parsing catalog {self.cat_name}...")
         dm = rdm.open(self.cat_name)
         self.cat_df = dm.source_catalog.to_pandas()
-        filter_name = "roman_F158"
 
         print("Done.")
 

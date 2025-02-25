@@ -1,4 +1,10 @@
+import os
+from pathlib import Path
+
 import lephare as lp
+
+LEPHAREDIR = os.environ.get("LEPHAREDIR", lp.LEPHAREDIR)
+CWD = os.getcwd()
 
 __all__ = ["default_roman_config"]
 
@@ -12,11 +18,11 @@ default_roman_config = {
     "ADD_DUSTEM": "NO",
     "ADD_EMLINES": "0,10000",
     "AGE_RANGE": "0.,15.e9",
-    "AUTO_ADAPT": "NO",
+    "AUTO_ADAPT": "YES",
     "CAT_FMT": "MEME",
     "CAT_IN": "roman_simulated_catalog.in",
-    "CAT_LINES": "0,1000000000",
-    "CAT_MAG": "AB",
+    "CAT_LINES": "-99,-99",
+    "CAT_MAG": "VEGA",
     "CAT_OUT": "roman_simulated_catalog.out",
     "CAT_TYPE": "LONG",
     "CHI2_OUT": "NO",
@@ -26,14 +32,14 @@ default_roman_config = {
     "EB_V": "0.,0.05,0.1,0.15,0.2,0.25,0.3,0.35,0.4,0.5",
     "EM_DISPERSION": "0.5,0.75,1.,1.5,2.",
     "EM_LINES": "EMP_UV",
-    "ERR_FACTOR": "1.5",
-    "ERR_SCALE": "0.02,0.02,0.02,0.02,0.02,0.02,0.02,0.05,0.05,0.05,0.05,0.02,0.02,0.02,0.02,0.02,0.02,0.02,0.02,0.02,0.02,0.02,0.02,0.05,0.05,0.05,0.05,0.1,0.2,0.3",  # noqa: E501
+    "ERR_FACTOR": "1.0",
+    "ERR_SCALE": "0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001",  # noqa: E501
     "EXTERNALZ_FILE": "NONE",
     "EXTINC_LAW": "SMC_prevot.dat,SB_calzetti.dat,SB_calzetti_bump1.dat,SB_calzetti_bump2.dat",
     "FILTER_CALIB": "0,0,0,0,0,0,0,0",
     "FILTER_FILE": "filter_roman",
     "FILTER_LIST": "roman/roman_F062.pb,roman/roman_F087.pb,roman/roman_F106.pb,roman/roman_F129.pb,roman/roman_F146.pb,roman/roman_F158.pb,roman/roman_F184.pb,roman/roman_F213.pb",  # noqa: E501
-    "FILTER_REP": f"{lp.LEPHAREDIR}/filt",
+    "FILTER_REP": f"{LEPHAREDIR}/filt",
     "FIR_CONT": "-1",
     "FIR_FREESCALE": "YES",
     "FIR_LIB": "NONE",
@@ -45,9 +51,9 @@ default_roman_config = {
     "GAL_LIB": "LIB_CE",
     "GAL_LIB_IN": "LIB_CE",
     "GAL_LIB_OUT": "ROMAN_SIMULATED_MAGS",
-    "GAL_SED": "examples/COSMOS_MOD.list",
+    "GAL_SED": f"{LEPHAREDIR}/examples/COSMOS_MOD.list",
     "GLB_CONTEXT": "0",
-    "INP_TYPE": "F",
+    "INP_TYPE": "M",
     "LIB_ASCII": "YES",
     "LIMITS_MAPP_CUT": "90",
     "LIMITS_MAPP_REF": "1",
@@ -58,13 +64,13 @@ default_roman_config = {
     "MABS_METHOD": "1",
     "MABS_REF": "11",
     "MABS_ZBIN": "0,0.5,2,4,6",
-    "MAGTYPE": "AB",
+    "MAGTYPE": "VEGA",
     "MAG_ABS": "-24,-5",
     "MAG_ABS_QSO": "-30,-10",
     "MAG_REF": "3",
     "MIN_THRES": "0.02",
     "MOD_EXTINC": "0,0",
-    "PARA_OUT": f"{lp.LEPHAREDIR}/examples/output.para",
+    "PARA_OUT": str(Path(__file__).parent / "data" / "default_roman_output.para"),
     "PDZ_OUT": "test",
     "PDZ_TYPE": "BAY_ZG",
     "QSO_FSCALE": "1.",
@@ -81,12 +87,12 @@ default_roman_config = {
     "STAR_LIB_OUT": "STAR_COSMOS",
     "STAR_SED": "sed/STAR/STAR_MOD_ALL.list",
     "TRANS_TYPE": "1",
-    "VERBOSE": "NO",
+    "VERBOSE": "YES",
     "ZFIX": "NO",
     "ZGRID_TYPE": "0",
-    "ZPHOTLIB": "CE_COSMOS,STAR_COSMOS,QSO_COSMOS",
+    "ZPHOTLIB": "ROMAN_SIMULATED_MAGS",
     "Z_INTERP": "YES",
     "Z_METHOD": "BEST",
     "Z_RANGE": "0.,99.99",
-    "Z_STEP": "0.01,0.,7.",
+    "Z_STEP": "0.1,0.,7.",
 }

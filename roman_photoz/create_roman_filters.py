@@ -1,10 +1,10 @@
-from pathlib import Path
+import os
 import sys
+from pathlib import Path
 
 import pandas as pd
 import requests
-import os
-
+from lephare.data_retrieval import get_auxiliary_data
 from lephare.filter import Filter  # type: ignore
 
 # date of the file
@@ -180,7 +180,7 @@ def run_filter_command(config_file_path: str = "") -> None:
     filter.run()
 
 
-def run(input_filename, input_path):
+def run(input_filename: str = "", input_path: str = ""):
     """
     Run the process to create filter files and execute the filter command.
 
@@ -193,6 +193,9 @@ def run(input_filename, input_path):
     """
     # create dataframe from file
     data = read_effarea_file(filename=input_filename, header=1)
+
+    # get auxiliary data
+    get_auxiliary_data()
 
     # format and create the file for each filter
     # containing lambda vs transmission
