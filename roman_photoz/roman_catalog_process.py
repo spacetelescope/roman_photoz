@@ -24,6 +24,12 @@ LEPHAREDIR = os.environ.get("LEPHAREDIR", lp.LEPHAREDIR)
 LEPHAREWORK = os.environ.get(
     "LEPHAREWORK", (Path(LEPHAREDIR).parent / "work").as_posix()
 )
+# default paths and filenames
+DEFAULT_INPUT_FILENAME = "roman_simulated_catalog.in"
+DEFAULT_INPUT_PATH = LEPHAREWORK
+DEFAULT_OUTPUT_FILENAME = "roman_photoz_results.asdf"
+DEFAULT_OUTPUT_PATH = LEPHAREWORK
+
 CWD = os.getcwd()
 
 
@@ -63,7 +69,11 @@ class RomanCatalogProcess:
             # a config was provided in dict format
             self.config = config_filename
 
-    def get_data(self, input_filename: str = "", input_path=""):
+    def get_data(
+        self,
+        input_filename: str = DEFAULT_INPUT_FILENAME,
+        input_path: str = DEFAULT_INPUT_PATH,
+    ):
         # N.B.: This is the method that will fetch multiband
         # roman catalog when it is available by using
         # the roman_catalog_handler.py module.
@@ -147,7 +157,7 @@ class RomanCatalogProcess:
 
     def save_results(
         self,
-        output_filename: str = "estimated_results.asdf",
+        output_filename: str = DEFAULT_OUTPUT_FILENAME,
         output_path: str = LEPHAREWORK,
     ):
 
@@ -158,11 +168,17 @@ class RomanCatalogProcess:
         with AsdfFile(tree) as af:
             af.write_to(output_filename)
 
-    def process(self, input_filename="", input_path=""):
+    def process(
+        self,
+        input_filename: str = DEFAULT_INPUT_FILENAME,
+        input_path: str = DEFAULT_INPUT_PATH,
+        output_filename: str = DEFAULT_OUTPUT_FILENAME,
+        output_path: str = DEFAULT_OUTPUT_PATH,
+    ):
         self.get_data(input_filename=input_filename, input_path=input_path)
         self.create_informer_stage()
         self.create_estimator_stage()
-        self.save_results()
+        self.save_results(output_filename=output_filename, output_path=output_path)
 
 
 if __name__ == "__main__":
@@ -177,20 +193,37 @@ if __name__ == "__main__":
     parser.add_argument(
         "--input_path",
         type=str,
-        default=LEPHAREWORK,
-        help="Path where the results will be saved (default: LEPHAREWORK).",
+        default=DEFAULT_INPUT_PATH,
+        help=f"Path to the catalog file (default: {DEFAULT_INPUT_PATH}).",
     )
     parser.add_argument(
         "--input_filename",
         type=str,
-        default="roman_simulated_catalog.in",
-        help="Effective area filename (default: roman_simulated_catalog.in).",
+        default=DEFAULT_INPUT_FILENAME,
+        help=f"Input catalog filename (default: {DEFAULT_INPUT_FILENAME}).",
+    )
+    parser.add_argument(
+        "--output_path",
+        type=str,
+        default=DEFAULT_OUTPUT_PATH,
+        help=f"Path to where the results will be saved (default: {DEFAULT_OUTPUT_PATH}).",
+    )
+    parser.add_argument(
+        "--output_filename",
+        type=str,
+        default=DEFAULT_OUTPUT_FILENAME,
+        help=f"Output filename (default: {DEFAULT_OUTPUT_FILENAME}).",
     )
 
     args = parser.parse_args()
 
     rcp = RomanCatalogProcess(config_filename=args.config_filename)
 
-    rcp.process(input_filename=args.input_filename, input_path=args.input_path)
+    rcp.process(
+        input_filename=args.input_filename,
+        input_path=args.input_path,
+        output_filename=args.output_filename,
+        output_path=args.output_path,
+    )
 
     print("Done.")
