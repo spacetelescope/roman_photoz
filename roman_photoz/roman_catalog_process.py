@@ -181,8 +181,7 @@ class RomanCatalogProcess:
         self.save_results(output_filename=output_filename, output_path=output_path)
 
 
-if __name__ == "__main__":
-
+def main():
     parser = argparse.ArgumentParser(description="Process Roman catalog data.")
     parser.add_argument(
         "--config_filename",
