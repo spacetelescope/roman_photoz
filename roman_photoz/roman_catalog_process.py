@@ -120,6 +120,16 @@ class RomanCatalogProcess:
         #    the details of which depends on the sub-class.
         # |we use rail's interface here to create the informer stage
         # |https://rail-hub.readthedocs.io/en/latest/api/rail.estimation.informer.html
+
+        # set up the informer stage with info from the config file (Z_STEP, ZMIN, ZMAX)
+        z_grid = self.config["Z_STEP"].split(",")
+        zstep = float(z_grid[0])
+        zmin = float(z_grid[1])
+        zmax = float(z_grid[2])
+        # we need to pass nzbins to the informer stage instead
+        # of zstep, which will be calculated by the informer at runtime
+        nzbins = (zmax - zmin) / zstep
+        
         self.inform_stage = LephareInformer.make_stage(
             name="inform_roman",
             nondetect_val=np.nan,
@@ -129,6 +139,9 @@ class RomanCatalogProcess:
             bands=self.flux_cols,
             err_bands=self.flux_err_cols,
             ref_band=self.flux_cols[0],
+            zmin=zmin,
+            zmax=zmax,
+            nzbins=nzbins,
         )
         self.inform_stage.inform(self.data)
 
