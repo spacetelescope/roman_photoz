@@ -1,159 +1,104 @@
 IDENT
+# Zphot from minimum chi2 (MIN distribution)
 Z_BEST
+# Zphot min from Delta_chi^2=1.0 (68%)
 Z_BEST68_LOW
+# Zphot max from Delta_chi^2=1.0 (68%)
 Z_BEST68_HIGH
-#Z_BEST90_LOW
-#Z_BEST90_HIGH
-#Z_BEST99_LOW
-#Z_BEST99_HIGH
+# Zphot min from Delta_chi^2=2.71 (90%)
+Z_BEST90_LOW
+# Zphot min from Delta_chi^2=2.71 (90%)
+Z_BEST90_HIGH
+# Zphot min from Delta_chi^2=6.63 (99%)
+Z_BEST99_LOW
+# Zphot min from Delta_chi^2=6.63 (99%)
+Z_BEST99_HIGH
+# Zphot from the median of the BAY distribution
 Z_MED
+# Zphot min at 68% (0.16 quantile of BAY distribution)
 Z_MED68_LOW
+# Zphot min at 68% (0.84 quantile of BAY distribution)
 Z_MED68_HIGH
-#Z_MODE
-#Z_MODE68_LOW
-#Z_MODE68_HIGH
-#Z_MODE90_LOW
-#Z_MODE90_HIGH
-#Z_MODE99_LOW
-#Z_MODE99_HIGH
+# Zphot min at 90% (0.05 quantile of BAY distribution)
+Z_MED90_LOW
+# Zphot max at 90% (0.95 quantile of BAY distribution)
+Z_MED90_HIGH
+# Zphot min at 99% (0.01 quantile of BAY distribution)
+Z_MED99_LOW
+# Zphot max at 99% (0.99 quantile of BAY distribution)
+Z_MED99_HIGH
+# Zphot from the mode of the BAY distribution
+Z_MODE
+# Zphot min at 68% (to encompass 68% of BAY distribution around the mode)
+Z_MODE68_LOW
+# Zphot max at 68% (to encompass 68% of BAY distribution around the mode)
+Z_MODE68_HIGH
+# Zphot min at 90% (to encompass 90% of BAY distribution around the mode)
+Z_MODE90_LOW
+# Zphot max at 90% (to encompass 90% of BAY distribution around the mode)
+Z_MODE90_HIGH
+# Zphot min at 99% (to encompass 99% of BAY distribution around the mode)
+Z_MODE99_LOW
+# Zphot max at 99% (to encompass 99% of BAY distribution around the mode)
+Z_MODE99_HIGH
+# lowest galaxy chi^2 for galaxy
 CHI_BEST
+# galaxy model for best chi^2
 MOD_BEST
+# Extinction law
 EXTLAW_BEST
+# E(B-V)
 EBV_BEST
-#ZF_BEST
 #MAG_ABS_BEST
-#PDZ_BEST
-#SCALE_BEST
-#DIST_MOD_BEST
-#NBAND_USED
-#NBAND_ULIM
+# Probability distribution between z and +/-0.1(1 + z)
+# PDZ_BEST
+# Scaling factor
+SCALE_BEST
+# Distance modulus
+# DIST_MOD_BEST
+# Number of band used in the measurement
+NBAND_USED
+# Number of band used as upper-limit
+NBAND_ULIM
 #
-####### Z-2nd GALAXY  ###########
+####### Galaxy Secondary solution from F(z) function  ###########
 Z_SEC
 CHI_SEC
 MOD_SEC
 EBV_SEC
-#EXTLAW_SEC
-#PDZ_SEC
-#SCALE_SEC
-#
-######## Z-Best QSO #############
-ZQ_BEST
-#ZQ_BEST68_LOW
-#ZQ_BEST68_HIGH
-#ZQ_BEST90_LOW
-#ZQ_BEST90_HIGH
-#ZQ_BEST99_LOW
-#ZQ_BEST99_HIGH
-#ZQ_MED
-#ZQ_MED68_LOW
-#ZQ_MED68_HIGH
-#ZQ_MODE
-#ZQ_MODE68_LOW
-#ZQ_MODE68_HIGH
-#ZQ_MODE90_LOW
-#ZQ_MODE90_HIGH
-#ZQ_MODE99_LOW
-#ZQ_MODE99_HIGH
-CHI_QSO
-MOD_QSO
-#MAG_ABS_QSO
-#DIST_MOD_QSO
-######## Best STAR  #############
-MOD_STAR
-CHI_STAR
+EXTLAW_SEC
+PDZ_SEC
+SCALE_SEC
 #
 ######## OBSERVED MAGNITUDES ####
+# input observed magnitudes
 MAG_OBS()
+# input errors
 ERR_MAG_OBS()
 ########  MODEL MAGNITUDES FOR GALAXY  ####
-#MAG_MOD()
+# magnitudes from best models
+MAG_MOD()
 #
 ######## K-COR , ABSOLUTE MAG, FILTER CHOICE  FOR GALAXY ##########
+# K-corrections
 K_COR()
+# absolute magnitudes
 MAG_ABS()
-EMAG_ABS()
+# Filter used for each absolute magnitude
 MABS_FILT()
 #
-######## K-COR , ABSOLUTE MAG. FOR QSO ##########
-#K_COR_QSO()
-#MAG_ABS_QSO()
-#
 ####### PROBABILITY PER Z BINS ##
-#PDZ()
+# 
+# PDZ()
 #
 ####### INPUT INFO ##############
+# Scaling factor
 SCALE_BEST
+# Number of band used in the measurement
 NBAND_USED
+# context
 CONTEXT
+# z step, min, max
 ZSPEC
+# All the information after zspec in the input file
 STRING_INPUT
-#MAG_MOD()
-#######  Far-IR  PARAMETERS  derived from  FIR_LIB  library  ###########
-#LUM_TIR_BEST
-#LIB_FIR
-#MOD_FIR
-#CHI2_FIR
-#FSCALE_FIR
-#NBAND_FIR
-#LUM_TIR_MED
-#LUM_TIR_INF
-#LUM_TIR_SUP
-#MAG_MOD_FIR()
-#MAG_ABS_FIR()
-#K_COR_FIR()
-#########  PHYSICAL PARAMETERS derived from  ZPHOTLIB  library IF DEFINED   ######
-AGE_BEST
-AGE_INF
-AGE_MED
-AGE_SUP
-##
-LDUST_BEST
-LDUST_INF
-LDUST_MED
-LDUST_SUP
-#
-LUM_TIR_BEST
-LUM_TIR_INF
-LUM_TIR_MED
-LUM_TIR_SUP
-#
-MASS_BEST
-MASS_INF
-MASS_MED
-MASS_SUP
-#
-SFR_BEST
-SFR_INF
-SFR_MED
-SFR_SUP
-#
-SSFR_BEST
-SSFR_INF
-SSFR_MED
-SSFR_SUP
-#
-COL1_INF
-COL1_MED
-COL1_SUP
-#
-COL2_INF
-COL2_MED
-COL2_SUP
-#
-LUM_NUV_BEST
-LUM_R_BEST
-LUM_K_BEST
-#
-###########################
-#  Emission lines
-#EM_FLUX_LYA
-#EM_FLUX_OII
-#EM_FLUX_OIIIA
-#EM_FLUX_OIIIB
-#EM_FLUX_HA
-#EM_FLUX_HB
-###########################
-# Predicted magnitudes in a spare filter set
-# ABSMAG_PRED()
-MAG_PRED()
