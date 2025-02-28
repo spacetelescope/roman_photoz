@@ -262,10 +262,12 @@ class SimulatedCatalog:
 
         new_catalog = np.empty(catalog.shape, dtype=new_dtype)
         for col in catalog.dtype.names:
-            new_catalog[col] = catalog[col]
+            # add some noise to the magnitudes
+            new_catalog[col] = rng.normal(loc=catalog[col], scale=0.1, size=catalog[col].shape)
             if "mag" in col:
+                # add error
                 new_catalog[f"{col}_err"] = np.abs(
-                    rng.normal(loc=0, scale=0.1, size=catalog[col].shape)
+                    rng.normal(loc=0, scale=0.01, size=catalog[col].shape)
                 )
 
         return new_catalog
