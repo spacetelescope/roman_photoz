@@ -54,4 +54,7 @@ plt.plot(zgrid, np.squeeze(rcp.estimated.data.pdf(zgrid)[0]))
 # plot the estimated redshift ("Z_BEST") vs. the actual redshift ("ZSPEC")
 plt.plot(rcp.estimated.data.ancil["ZSPEC"], rcp.estimated.data.ancil["Z_BEST"], "o")
 
+# plot the redshift vs. the simulated magnitude in all filters
+plt.plot(rcp.estimated.data.ancil["ZSPEC"], rcp.estimated.data.ancil["MAG_OBS()"], "o")
+
 print("Done!")
