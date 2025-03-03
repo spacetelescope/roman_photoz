@@ -4,6 +4,7 @@ import json
 import os
 from collections import OrderedDict
 from pathlib import Path
+import sys
 from typing import Union
 
 import lephare as lp
@@ -35,7 +36,7 @@ CWD = os.getcwd()
 
 class RomanCatalogProcess:
 
-    def __init__(self, config_filename: str = ""):
+    def __init__(self, config_filename: Union[dict, str] = ""):
         self.data: dict = OrderedDict()
         # set configuration file (roman will have its own)
         self.set_config_file(config_filename)
@@ -136,6 +137,8 @@ class RomanCatalogProcess:
             model=f"{Path(LEPHAREWORK, 'roman_model.pkl').as_posix()}",
             hdf5_groupname="",
             lephare_config=self.config,
+            star_config=None,
+            qso_config=None,
             bands=self.flux_cols,
             err_bands=self.flux_err_cols,
             ref_band=self.flux_cols[0],
@@ -164,6 +167,8 @@ class RomanCatalogProcess:
             ref_band=self.flux_cols[0],
             output_keys=self.default_roman_output_keys,
             lephare_config=self.config,
+            star_config=None,
+            qso_config=None,
         )
 
         self.estimated = estimate_lephare.estimate(self.data)
@@ -181,20 +186,27 @@ class RomanCatalogProcess:
         with AsdfFile(tree) as af:
             af.write_to(output_filename)
 
+        print(f"Results saved to {output_filename}")
+
     def process(
         self,
         input_filename: str = DEFAULT_INPUT_FILENAME,
         input_path: str = DEFAULT_INPUT_PATH,
         output_filename: str = DEFAULT_OUTPUT_FILENAME,
         output_path: str = DEFAULT_OUTPUT_PATH,
+        save_results: bool = True,
     ):
         self.get_data(input_filename=input_filename, input_path=input_path)
         self.create_informer_stage()
         self.create_estimator_stage()
-        self.save_results(output_filename=output_filename, output_path=output_path)
+        if save_results:
+            self.save_results(output_filename=output_filename, output_path=output_path)
 
 
-def main():
+def main(argv=None):
+    if argv is None:
+        argv = sys.argv
+    
     parser = argparse.ArgumentParser(description="Process Roman catalog data.")
     parser.add_argument(
         "--config_filename",
@@ -226,6 +238,12 @@ def main():
         default=DEFAULT_OUTPUT_FILENAME,
         help=f"Output filename (default: {DEFAULT_OUTPUT_FILENAME}).",
     )
+    parser.add_argument(
+        "--save_results",
+        type=bool,
+        default=True,
+        help=f"Save results? (default: True).",
+    )
 
     args = parser.parse_args()
 
@@ -236,6 +254,7 @@ def main():
         input_path=args.input_path,
         output_filename=args.output_filename,
         output_path=args.output_path,
+        save_results=args.save_results
     )
 
     print("Done.")
