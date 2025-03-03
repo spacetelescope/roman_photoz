@@ -205,7 +205,8 @@ class RomanCatalogProcess:
 
 def main(argv=None):
     if argv is None:
-        argv = sys.argv
+        # skip the first argument (script name)
+        argv = sys.argv[:1]
 
     parser = argparse.ArgumentParser(description="Process Roman catalog data.")
     parser.add_argument(
@@ -213,6 +214,7 @@ def main(argv=None):
         type=str,
         default="",
         help="Path to the configuration file (default: use default Roman config).",
+        required=False,
     )
     parser.add_argument(
         "--input_path",
@@ -245,7 +247,7 @@ def main(argv=None):
         help="Save results? (default: True).",
     )
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     rcp = RomanCatalogProcess(config_filename=args.config_filename)
 
