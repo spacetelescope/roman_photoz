@@ -2,9 +2,9 @@
 import argparse
 import json
 import os
+import sys
 from collections import OrderedDict
 from pathlib import Path
-import sys
 from typing import Union
 
 import lephare as lp
@@ -130,7 +130,7 @@ class RomanCatalogProcess:
         # we need to pass nzbins to the informer stage instead
         # of zstep, which will be calculated by the informer at runtime
         nzbins = (zmax - zmin) / zstep
-        
+
         self.inform_stage = LephareInformer.make_stage(
             name="inform_roman",
             nondetect_val=np.nan,
@@ -206,7 +206,7 @@ class RomanCatalogProcess:
 def main(argv=None):
     if argv is None:
         argv = sys.argv
-    
+
     parser = argparse.ArgumentParser(description="Process Roman catalog data.")
     parser.add_argument(
         "--config_filename",
@@ -242,7 +242,7 @@ def main(argv=None):
         "--save_results",
         type=bool,
         default=True,
-        help=f"Save results? (default: True).",
+        help="Save results? (default: True).",
     )
 
     args = parser.parse_args()
@@ -254,7 +254,7 @@ def main(argv=None):
         input_path=args.input_path,
         output_filename=args.output_filename,
         output_path=args.output_path,
-        save_results=args.save_results
+        save_results=args.save_results,
     )
 
     print("Done.")
