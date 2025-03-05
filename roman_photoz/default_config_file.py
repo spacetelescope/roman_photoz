@@ -20,7 +20,7 @@ default_roman_config = {
     "AGE_RANGE": "0.,15.e9",
     "AUTO_ADAPT": "YES",
     "CAT_FMT": "MEME",
-    "CAT_IN": "roman_simulated_catalog.in",
+    "CAT_IN": "roman_simulated_catalog.asdf",
     "CAT_LINES": "-99,-99",
     "CAT_MAG": "VEGA",
     "CAT_OUT": "roman_simulated_catalog.out",

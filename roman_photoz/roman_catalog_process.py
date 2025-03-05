@@ -26,7 +26,7 @@ LEPHAREWORK = os.environ.get(
     "LEPHAREWORK", (Path(LEPHAREDIR).parent / "work").as_posix()
 )
 # default paths and filenames
-DEFAULT_INPUT_FILENAME = "roman_simulated_catalog.in"
+DEFAULT_INPUT_FILENAME = "roman_simulated_catalog.asdf"
 DEFAULT_INPUT_PATH = LEPHAREWORK
 DEFAULT_OUTPUT_FILENAME = "roman_photoz_results.asdf"
 DEFAULT_OUTPUT_PATH = LEPHAREWORK
@@ -92,9 +92,9 @@ class RomanCatalogProcess:
         print(len(bands))
 
         # read catalog data
-        if Path(input_path).suffix == ".asdf":
-            handler = RomanCatalogHandler(input_path)
-            cat_data = handler.process()
+        if Path(filename).suffix == ".asdf":
+            handler = RomanCatalogHandler(filename)
+            cat_data = Table(handler.process())
         else:
             cat_data = Table.read(filename, format="ascii.no_header")
 

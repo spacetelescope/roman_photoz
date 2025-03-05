@@ -20,7 +20,7 @@ argv = [
     "--input_path",
     "/Users/mteodoro/Library/Caches/lephare/work/",
     "--input_filename",
-    "roman_simulated_catalog.in",
+    "roman_simulated_catalog.asdf",
     "--output_path",
     output_path,
     "--output_filename",
