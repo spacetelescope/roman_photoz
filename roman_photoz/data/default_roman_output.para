@@ -1,0 +1,104 @@
+IDENT
+# Zphot from minimum chi2 (MIN distribution)
+Z_BEST
+# Zphot min from Delta_chi^2=1.0 (68%)
+Z_BEST68_LOW
+# Zphot max from Delta_chi^2=1.0 (68%)
+Z_BEST68_HIGH
+# Zphot min from Delta_chi^2=2.71 (90%)
+Z_BEST90_LOW
+# Zphot min from Delta_chi^2=2.71 (90%)
+Z_BEST90_HIGH
+# Zphot min from Delta_chi^2=6.63 (99%)
+Z_BEST99_LOW
+# Zphot min from Delta_chi^2=6.63 (99%)
+Z_BEST99_HIGH
+# Zphot from the median of the BAY distribution
+Z_MED
+# Zphot min at 68% (0.16 quantile of BAY distribution)
+Z_MED68_LOW
+# Zphot min at 68% (0.84 quantile of BAY distribution)
+Z_MED68_HIGH
+# Zphot min at 90% (0.05 quantile of BAY distribution)
+Z_MED90_LOW
+# Zphot max at 90% (0.95 quantile of BAY distribution)
+Z_MED90_HIGH
+# Zphot min at 99% (0.01 quantile of BAY distribution)
+Z_MED99_LOW
+# Zphot max at 99% (0.99 quantile of BAY distribution)
+Z_MED99_HIGH
+# Zphot from the mode of the BAY distribution
+Z_MODE
+# Zphot min at 68% (to encompass 68% of BAY distribution around the mode)
+Z_MODE68_LOW
+# Zphot max at 68% (to encompass 68% of BAY distribution around the mode)
+Z_MODE68_HIGH
+# Zphot min at 90% (to encompass 90% of BAY distribution around the mode)
+Z_MODE90_LOW
+# Zphot max at 90% (to encompass 90% of BAY distribution around the mode)
+Z_MODE90_HIGH
+# Zphot min at 99% (to encompass 99% of BAY distribution around the mode)
+Z_MODE99_LOW
+# Zphot max at 99% (to encompass 99% of BAY distribution around the mode)
+Z_MODE99_HIGH
+# lowest galaxy chi^2 for galaxy
+CHI_BEST
+# galaxy model for best chi^2
+MOD_BEST
+# Extinction law
+EXTLAW_BEST
+# E(B-V)
+EBV_BEST
+#MAG_ABS_BEST
+# Probability distribution between z and +/-0.1(1 + z)
+# PDZ_BEST
+# Scaling factor
+SCALE_BEST
+# Distance modulus
+# DIST_MOD_BEST
+# Number of band used in the measurement
+NBAND_USED
+# Number of band used as upper-limit
+NBAND_ULIM
+#
+####### Galaxy Secondary solution from F(z) function  ###########
+Z_SEC
+CHI_SEC
+MOD_SEC
+EBV_SEC
+EXTLAW_SEC
+PDZ_SEC
+SCALE_SEC
+#
+######## OBSERVED MAGNITUDES ####
+# input observed magnitudes
+MAG_OBS()
+# input errors
+ERR_MAG_OBS()
+########  MODEL MAGNITUDES FOR GALAXY  ####
+# magnitudes from best models
+MAG_MOD()
+#
+######## K-COR , ABSOLUTE MAG, FILTER CHOICE  FOR GALAXY ##########
+# K-corrections
+K_COR()
+# absolute magnitudes
+MAG_ABS()
+# Filter used for each absolute magnitude
+MABS_FILT()
+#
+####### PROBABILITY PER Z BINS ##
+#
+# PDZ()
+#
+####### INPUT INFO ##############
+# Scaling factor
+SCALE_BEST
+# Number of band used in the measurement
+NBAND_USED
+# context
+CONTEXT
+# z step, min, max
+ZSPEC
+# All the information after zspec in the input file
+STRING_INPUT

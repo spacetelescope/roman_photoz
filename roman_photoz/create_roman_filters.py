@@ -1,11 +1,11 @@
-from pathlib import Path
+import os
 import sys
+from pathlib import Path
 
 import pandas as pd
 import requests
-import os
-
-# import lephare
+from lephare.data_retrieval import get_auxiliary_data
+from lephare.filter import Filter  # type: ignore
 
 # date of the file
 DEFAULT_FILE_DATE = "20210614"
@@ -14,7 +14,7 @@ DEFAULT_FILE_DATE = "20210614"
 BASE_URL = "https://roman.gsfc.nasa.gov/science/RRI/Roman_effarea_{}.xlsx"
 
 # Default filename with date
-DEFAULT_EFFAREA_FILENAME = f"src/data/Roman_effarea_{DEFAULT_FILE_DATE}.xlsx"
+DEFAULT_EFFAREA_FILENAME = f"roman_photoz/data/Roman_effarea_{DEFAULT_FILE_DATE}.xlsx"
 
 
 def download_file(url: str, dest: str):
@@ -104,6 +104,16 @@ def create_files(data: pd.DataFrame, filepath: str = "") -> None:
 
 
 def create_roman_phot_par_file(filter_list: list, filter_rep: Path) -> None:
+    """
+    Create the roman_phot.par file to be used with the filter command.
+
+    Parameters
+    ----------
+    filter_list : list
+        List of filter filenames.
+    filter_rep : Path
+        Path to the directory where the filters are stored.
+    """
     f_list: str = ",".join(filter_list)
     f_calib: str = ",".join(len(filter_list) * ["0"])
     f_rep: str = (
@@ -125,6 +135,19 @@ def create_roman_phot_par_file(filter_list: list, filter_rep: Path) -> None:
 
 
 def create_path(filepath: str = "") -> Path:
+    """
+    Create the directory structure for saving filter files.
+
+    Parameters
+    ----------
+    filepath : str, optional
+        The path where the filter files will be saved. If not provided, the current directory will be used.
+
+    Returns
+    -------
+    Path
+        The path where the filter files will be saved.
+    """
     # default to save filter files locally
     path = Path(".").resolve()
     if lepharedir := os.environ.get("LEPHAREDIR", None):
@@ -140,26 +163,54 @@ def create_path(filepath: str = "") -> Path:
 
 
 def run_filter_command(config_file_path: str = "") -> None:
-    from lephare.filter import Filter
+    """
+    Run the filter command to create the filter file needed by rail+lephare.
 
-    config_file = Path(config_file_path, "roman_phot.par").as_posix()
-    filter = Filter(config_file=config_file)
+    Parameters
+    ----------
+    config_file_path : str, optional
+        The path to the configuration file that contains the information about the filters.
+        This is usually either in the main config file or a separate file containing all
+        the relevant info about the filters (i.e. FILTER_REP, FILTER_LIST, TRANS_TYPE, FILTER_CALIB, FILTER_FILE)
+        The result will be saved to LEPHAREWORK/filt with the name specified by FILTER_FILE and extension 'dat'.
+    """
+    config_file_path = create_path(filepath=config_file_path).as_posix()
+    config_file_path = Path(config_file_path, "roman_phot.par").as_posix()
+    filter = Filter(config_file=config_file_path)
     filter.run()
 
 
-def run(input_filename, input_path):
+def run(input_filename: str = "", input_path: str = ""):
+    """
+    Run the process to create filter files and execute the filter command.
+
+    Parameters
+    ----------
+    input_filename : str
+        The filename containing the monochromatic effective area of each filter per column.
+    input_path : str
+        The path where the results will be saved.
+    """
     # create dataframe from file
     data = read_effarea_file(filename=input_filename, header=1)
-    # format and create files to be used by rail+lephare
+
+    # get auxiliary data
+    get_auxiliary_data()
+
+    # format and create the file for each filter
+    # containing lambda vs transmission
     create_files(data=data, filepath=input_path)
-    # run filter command to create the filter file needed by rail+lephare
+
+    # run filter command to create the filter
+    # file containing lambda vs transmission for all filters
+    # (merge all the filter files created in the previous call)
     run_filter_command(config_file_path=input_path)
 
 
 if __name__ == "__main__":
 
     # this module takes a filename as input containing
-    # the monocromatic effective area of each filter per column
+    # the monochromatic effective area of each filter per column
     # and creates one file for each filter as well as
     # the final merged file expected by rail+lephare
 
