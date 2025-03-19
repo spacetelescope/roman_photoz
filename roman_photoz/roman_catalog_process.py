@@ -155,10 +155,10 @@ class RomanCatalogProcess:
         for n, b in enumerate(bands):
             flux = cat_data[cat_data.colnames[1 + 2 * n]].astype(float)
             flux_err = cat_data[cat_data.colnames[2 + 2 * n]].astype(float)
-            self.data[f"flux_{b.split("_")[1].split(".")[0]}"] = flux
-            self.flux_cols.append(f"flux_{b.split("_")[1].split(".")[0]}")
-            self.data[f"flux_err_{b.split("_")[1].split(".")[0]}"] = flux_err
-            self.flux_err_cols.append(f"flux_err_{b.split("_")[1].split(".")[0]}")
+            self.data[f"flux_{b.split('_')[1].split('.')[0]}"] = flux
+            self.flux_cols.append(f"flux_{b.split('_')[1].split('.')[0]}")
+            self.data[f"flux_err_{b.split('_')[1].split('.')[0]}"] = flux_err
+            self.flux_err_cols.append(f"flux_err_{b.split('_')[1].split('.')[0]}")
         self.data["context"] = np.array(cat_data[cat_data.colnames[-3]]).astype(int)
         self.data["redshift"] = np.array(cat_data[cat_data.colnames[-2]]).astype(float)
         self.data["string_data"] = np.array(cat_data[cat_data.colnames[-1]]).astype(
