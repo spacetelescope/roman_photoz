@@ -46,7 +46,7 @@ class SimulatedCatalog:
     inform_stage : None
         Placeholder for inform stage.
     estimated : None
-        Placeholder for estimated data.
+        Holds all the results from `roman_photoz`.
     filter_lib : None
         Placeholder for filter library.
     simulated_data_filename : str
@@ -234,7 +234,11 @@ class SimulatedCatalog:
                     # add new column
                     if "flux" in new_column:
                         # add flux and error columns for each filter
-                        simulated_colname = f"magnitude_{filter_name}_err" if "err" in new_column else f"magnitude_{filter_name}"
+                        simulated_colname = (
+                            f"magnitude_{filter_name}_err"
+                            if "err" in new_column
+                            else f"magnitude_{filter_name}"
+                        )
                         self.roman_catalog_template.source_catalog.add_column(
                             catalog[simulated_colname], name=new_column
                         )
@@ -242,18 +246,31 @@ class SimulatedCatalog:
                         # copy parameter from F158
                         simulated_colname = new_column
                         self.roman_catalog_template.source_catalog.add_column(
-                            self.roman_catalog_template.source_catalog[f"F158{param}"], name=new_column
+                            self.roman_catalog_template.source_catalog[f"F158{param}"],
+                            name=new_column,
                         )
 
                 else:
                     # replace column data
                     if "flux" in new_column:
-                        simulated_colname = f"magnitude_{filter_name}_err" if "err" in new_column else f"magnitude_{filter_name}"
-                        self.roman_catalog_template.source_catalog[new_column] = catalog[simulated_colname]
-        
-        self.roman_catalog_template.source_catalog.add_column(catalog["context"], name="context")
-        self.roman_catalog_template.source_catalog.add_column(catalog["zspec"], name="zspec")
-        self.roman_catalog_template.source_catalog.add_column(catalog["z_true"], name="string_data")
+                        simulated_colname = (
+                            f"magnitude_{filter_name}_err"
+                            if "err" in new_column
+                            else f"magnitude_{filter_name}"
+                        )
+                        self.roman_catalog_template.source_catalog[new_column] = (
+                            catalog[simulated_colname]
+                        )
+
+        self.roman_catalog_template.source_catalog.add_column(
+            catalog["context"], name="context"
+        )
+        self.roman_catalog_template.source_catalog.add_column(
+            catalog["zspec"], name="zspec"
+        )
+        self.roman_catalog_template.source_catalog.add_column(
+            catalog["z_true"], name="string_data"
+        )
 
     def save_catalog(
         self,

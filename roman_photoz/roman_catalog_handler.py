@@ -8,28 +8,41 @@ from .default_config_file import default_roman_config
 
 
 class RomanCatalogHandler:
+    """
+    A class to handle Roman catalog operations including reading, formatting, and processing.
+
+    Parameters
+    ----------
+    catname : str, optional
+        The name of the catalog file (default is an empty string).
+    """
+
     def __init__(self, catname: str = ""):
+        """
+        Initialize the RomanCatalogHandler with a catalog name.
+
+        Parameters
+        ----------
+        catname : str, optional
+            The name of the catalog file (default is an empty string).
+        """
         self.cat_name = catname
         self.cat_array = None
         self.catalog = None
         self.cat_temp_filename = "cat_temp_file.csv"
         # get Roman's filter names from default config file
-        self.filter_names = (
-            default_roman_config.get("FILTER_LIST")
-            .replace(".pb", "")
-            .replace("roman/", "")
-            .split(",")
-        )
-
-    # def format_colnames(self):
-    #     # TODO: implement logic to handle the order of the bands
-    #     # (the hack below is just because we only have synthetic images for F158)
-    #     new_cols = [
-    #         f"{col}_{self.filter_names[5]}" for col in self.cat_array.dtype.names[-2:]
-    #     ]
-    #     self.cat_array.dtype.names = list(self.cat_array.dtype.names[:-2]) + new_cols
+        filter_list = default_roman_config.get("FILTER_LIST")
+        if filter_list is not None:
+            self.filter_names = (
+                filter_list.replace(".pb", "").replace("roman/", "").split(",")
+            )
+        else:
+            raise ValueError("Filter list not found in default config file.")
 
     def format_catalog(self):
+        """
+        Format the catalog by appending necessary fields and columns.
+        """
         print("Formatting catalog...")
         # self.format_colnames()
 
@@ -69,6 +82,9 @@ class RomanCatalogHandler:
         print("Done.")
 
     def read_catalog(self):
+        """
+        Read the catalog file and convert it to a numpy structured array.
+        """
         print(f"Parsing catalog {self.cat_name}...")
         dm = rdm.open(self.cat_name)
         self.cat_array = (
@@ -78,6 +94,14 @@ class RomanCatalogHandler:
         print("Done.")
 
     def process(self):
+        """
+        Process the catalog by reading and formatting it.
+
+        Returns
+        -------
+        numpy.ndarray
+            The formatted catalog.
+        """
         self.read_catalog()
         self.format_catalog()
 

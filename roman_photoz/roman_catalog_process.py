@@ -125,7 +125,6 @@ class RomanCatalogProcess:
         # full qualified path to the catalog file
         filename = Path(input_path, input_filename).as_posix()
 
-
         # read in catalog data
         if Path(filename).suffix == ".asdf":
             # Roman catalog
@@ -149,7 +148,7 @@ class RomanCatalogProcess:
         # get information about Roman filters
         bands = self.config["FILTER_LIST"].split(",")
         print(len(bands))
-        
+
         # loop over the filters we want to keep to get
         # the number of the filter, n, and the name, b
         # (the final data has to have  2 * n_bands + 4 columns)
@@ -308,7 +307,7 @@ def main(argv=None):
     """
     if argv is None:
         # skip the first argument (script name)
-        argv = sys.argv[:1]
+        argv = sys.argv[1:]
 
     parser = argparse.ArgumentParser(description="Process Roman catalog data.")
     parser.add_argument(
