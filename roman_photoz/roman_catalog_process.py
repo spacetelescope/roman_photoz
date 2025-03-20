@@ -26,7 +26,7 @@ LEPHAREWORK = os.environ.get(
     "LEPHAREWORK", (Path(LEPHAREDIR).parent / "work").as_posix()
 )
 # default paths and filenames
-DEFAULT_INPUT_FILENAME = "roman_simulated_catalog.in"
+DEFAULT_INPUT_FILENAME = "roman_simulated_catalog.asdf"
 DEFAULT_INPUT_PATH = LEPHAREWORK
 DEFAULT_OUTPUT_FILENAME = "roman_photoz_results.asdf"
 DEFAULT_OUTPUT_PATH = LEPHAREWORK
@@ -35,8 +35,32 @@ CWD = os.getcwd()
 
 
 class RomanCatalogProcess:
+    """
+    A class to process Roman catalog data using rail and lephare.
+
+    Attributes
+    ----------
+    data : dict
+        Dictionary to store the processed data.
+    flux_cols : list
+        List of flux columns.
+    flux_err_cols : list
+        List of flux error columns.
+    inform_stage : RailStage
+        Informer stage for creating the library of SEDs.
+    estimated : RailStage
+        Estimator stage for finding the best fits from the library.
+    """
 
     def __init__(self, config_filename: Union[dict, str] = ""):
+        """
+        Initialize the RomanCatalogProcess instance.
+
+        Parameters
+        ----------
+        config_filename : Union[dict, str], optional
+            Path to the configuration file or a configuration dictionary.
+        """
         self.data: dict = OrderedDict()
         # set configuration file (roman will have its own)
         self.set_config_file(config_filename)
@@ -58,6 +82,14 @@ class RomanCatalogProcess:
                 ]
 
     def set_config_file(self, config_filename: Union[dict, str] = ""):
+        """
+        Set the configuration file.
+
+        Parameters
+        ----------
+        config_filename : Union[dict, str], optional
+            Path to the configuration file in JSON format or a configuration dictionary.
+        """
         if isinstance(config_filename, str):
             if config_filename:
                 # a config filename was provided in JSON format
@@ -74,29 +106,48 @@ class RomanCatalogProcess:
         self,
         input_filename: str = DEFAULT_INPUT_FILENAME,
         input_path: str = DEFAULT_INPUT_PATH,
-    ):
-        # N.B.: This is the method that will fetch multiband
-        # roman catalog when it is available by using
-        # the roman_catalog_handler.py module.
-        # For now, just for the sake of implementation, we'll
-        # be using data from the COSMOS example.
+    ) -> Table:
+        """
+        Fetch the data from the input file.
 
-        if not input_filename:
-            raise ValueError("Input filename is required.")
+        Parameters
+        ----------
+        input_filename : str, optional
+            Name of the input file.
+        input_path : str, optional
+            Path to the input file.
 
-        # read custom input_filename
+        Returns
+        -------
+        Table
+            The catalog data.
+        """
+        # full qualified path to the catalog file
         filename = Path(input_path, input_filename).as_posix()
 
-        # get filters
+        # read in catalog data
+        if Path(filename).suffix == ".asdf":
+            # Roman catalog
+            handler = RomanCatalogHandler(filename)
+            cat_data = Table(handler.process())
+        else:
+            # custom catalog
+            cat_data = Table.read(filename, format="ascii.no_header")
+
+        return cat_data
+
+    def format_data(self, cat_data: Table):
+        """
+        Format the catalog data.
+
+        Parameters
+        ----------
+        cat_data : Table
+            The catalog data.
+        """
+        # get information about Roman filters
         bands = self.config["FILTER_LIST"].split(",")
         print(len(bands))
-
-        # read catalog data
-        if Path(input_path).suffix == ".asdf":
-            handler = RomanCatalogHandler(input_path)
-            cat_data = handler.process()
-        else:
-            cat_data = Table.read(filename, format="ascii.no_header")
 
         # loop over the filters we want to keep to get
         # the number of the filter, n, and the name, b
@@ -104,10 +155,10 @@ class RomanCatalogProcess:
         for n, b in enumerate(bands):
             flux = cat_data[cat_data.colnames[1 + 2 * n]].astype(float)
             flux_err = cat_data[cat_data.colnames[2 + 2 * n]].astype(float)
-            self.data[f"flux_{b.split("_")[1].split(".")[0]}"] = flux
-            self.flux_cols.append(f"flux_{b.split("_")[1].split(".")[0]}")
-            self.data[f"flux_err_{b.split("_")[1].split(".")[0]}"] = flux_err
-            self.flux_err_cols.append(f"flux_err_{b.split("_")[1].split(".")[0]}")
+            self.data[f"flux_{b.split('_')[1].split('.')[0]}"] = flux
+            self.flux_cols.append(f"flux_{b.split('_')[1].split('.')[0]}")
+            self.data[f"flux_err_{b.split('_')[1].split('.')[0]}"] = flux_err
+            self.flux_err_cols.append(f"flux_err_{b.split('_')[1].split('.')[0]}")
         self.data["context"] = np.array(cat_data[cat_data.colnames[-3]]).astype(int)
         self.data["redshift"] = np.array(cat_data[cat_data.colnames[-2]]).astype(float)
         self.data["string_data"] = np.array(cat_data[cat_data.colnames[-1]]).astype(
@@ -115,6 +166,9 @@ class RomanCatalogProcess:
         )
 
     def create_informer_stage(self):
+        """
+        Create the informer stage to generate the library of SEDs with various parameters.
+        """
         # use the inform stage to create the library of SEDs with
         # various redshifts, extinction parameters, and reddening values.
         # -> Informer will produce as output a generic “model”,
@@ -149,6 +203,9 @@ class RomanCatalogProcess:
         self.inform_stage.inform(self.data)
 
     def create_estimator_stage(self):
+        """
+        Create the estimator stage to find the best fits from the library.
+        """
         # take the sythetic test data, and find the best
         # fits from the library. This results in a PDF, zmode,
         # and zmean for each input test data.
@@ -178,9 +235,26 @@ class RomanCatalogProcess:
         output_filename: str = DEFAULT_OUTPUT_FILENAME,
         output_path: str = LEPHAREWORK,
     ):
+        """
+        Save the results to the specified output file.
 
+        Parameters
+        ----------
+        output_filename : str, optional
+            Name of the output file.
+        output_path : str, optional
+            Path to the output file.
+
+        Raises
+        ------
+        ValueError
+            If there are no results to save.
+        """
         output_filename = Path(output_path, output_filename).as_posix()
-        ancil_data = self.estimated.data.ancil
+        if self.estimated is not None:
+            ancil_data = self.estimated.data.ancil
+        else:
+            raise ValueError("No results to save.")
 
         tree = {"roman_photoz_results": ancil_data}
         with AsdfFile(tree) as af:
@@ -196,9 +270,28 @@ class RomanCatalogProcess:
         output_path: str = DEFAULT_OUTPUT_PATH,
         save_results: bool = True,
     ):
-        self.get_data(input_filename=input_filename, input_path=input_path)
+        """
+        Process the Roman catalog data.
+
+        Parameters
+        ----------
+        input_filename : str, optional
+            Name of the input file.
+        input_path : str, optional
+            Path to the input file.
+        output_filename : str, optional
+            Name of the output file.
+        output_path : str, optional
+            Path to the output file.
+        save_results : bool, optional
+            Whether to save the results.
+        """
+        cat_data = self.get_data(input_filename=input_filename, input_path=input_path)
+
+        self.format_data(cat_data)
         self.create_informer_stage()
         self.create_estimator_stage()
+
         if save_results:
             self.save_results(output_filename=output_filename, output_path=output_path)
 

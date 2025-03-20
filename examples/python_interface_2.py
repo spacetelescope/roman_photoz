@@ -20,7 +20,7 @@ argv = [
     "--input_path",
     "/Users/mteodoro/Library/Caches/lephare/work/",
     "--input_filename",
-    "roman_simulated_catalog.in",
+    "roman_simulated_catalog.asdf",
     "--output_path",
     output_path,
     "--output_filename",
@@ -53,5 +53,8 @@ plt.plot(zgrid, np.squeeze(rcp.estimated.data.pdf(zgrid)[0]))
 
 # plot the estimated redshift ("Z_BEST") vs. the actual redshift ("ZSPEC")
 plt.plot(rcp.estimated.data.ancil["ZSPEC"], rcp.estimated.data.ancil["Z_BEST"], "o")
+
+# plot the redshift vs. the simulated magnitude in all filters
+plt.plot(rcp.estimated.data.ancil["ZSPEC"], rcp.estimated.data.ancil["MAG_OBS()"], "o")
 
 print("Done!")
