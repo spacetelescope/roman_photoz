@@ -4,7 +4,7 @@ Installation
 To install `roman_photoz`, follow these steps:
 
 1. Clone the repository:
-   
+
    .. code-block:: bash
 
       git clone https://github.com/yourusername/roman_photoz.git
