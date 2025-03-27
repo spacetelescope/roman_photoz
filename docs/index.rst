@@ -2,12 +2,7 @@
 roman_photoz
 ============
 The ``roman_photoz`` package provides tools for processing and analyzing data
-from the Roman Space Telescope. It includes modules for handling catalogs,
-simulating data, and applying filters.
-
-The package is designed to facilitate the analysis of astronomical data,
-particularly in the context of photometric redshift estimation and catalog
-processing.
+from the Roman Space Telescope to estimate photometric redshift.
 
 .. toctree::
    :maxdepth: 2
