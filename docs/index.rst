@@ -1,8 +1,9 @@
 ============
 roman_photoz
 ============
-The ``roman_photoz`` package provides tools for processing and analyzing data
-from the Roman Space Telescope to estimate photometric redshift.
+The ``roman_photoz`` package provides tools for processing catalogs
+produced by the Roman Space Telescope Calibration Pipeline (``romancal``)
+to estimate photometric redshift.
 
 .. toctree::
    :maxdepth: 2
