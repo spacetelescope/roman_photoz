@@ -77,8 +77,6 @@ class SimulatedCatalog:
         input_path = (this_path / "data" / input_filename).as_posix()
         return rdm.open(input_path)
 
-        print("DONE.")
-
     def is_folder_not_empty(self, folder_path: str, partial_text: str) -> bool:
         """
         Check if a folder exists and contains files with the specified partial text.
@@ -317,21 +315,34 @@ class SimulatedCatalog:
 
         return new_catalog
 
-    def add_error(self, catalog):
+    def add_error(
+        self, catalog, mag_noise: float = 0.1, mag_err: float = 0.01, seed: int = 42
+    ):
         """
         Add a Gaussian error to each magnitude column in the catalog.
+
+        For each magnitude column, this method adds:
+        - Gaussian noise with a mean equal to the original value and a standard deviation of `mag_noise`.
+        - An error column (`<magnitude_column>_err`) with values sampled from a Gaussian distribution
+          with a mean of 0 and a standard deviation of `mag_err`.
 
         Parameters
         ----------
         catalog : np.ndarray
             The catalog data.
+        mag_noise : float, optional
+            The standard deviation of the Gaussian noise to be added to the observed magnitudes (default: 0.1).
+        mag_err : float, optional
+            The standard deviation of the Gaussian noise to be added to the error columns (default: 0.01).
+        seed : int, optional
+            The seed for the random number generator.
 
         Returns
         -------
         np.ndarray
             The catalog data with error columns added.
         """
-        rng = np.random.default_rng()
+        rng = np.random.default_rng(seed=seed)
         new_dtype = []
         for col in catalog.dtype.names:
             new_dtype.append((col, catalog[col].dtype))
@@ -342,12 +353,12 @@ class SimulatedCatalog:
         for col in catalog.dtype.names:
             # add some noise to the magnitudes
             new_catalog[col] = rng.normal(
-                loc=catalog[col], scale=0.1, size=catalog[col].shape
+                loc=catalog[col], scale=mag_noise, size=catalog[col].shape
             )
             if "mag" in col:
                 # add error
                 new_catalog[f"{col}_err"] = np.abs(
-                    rng.normal(loc=0, scale=0.01, size=catalog[col].shape)
+                    rng.normal(loc=0, scale=mag_err, size=catalog[col].shape)
                 )
 
         return new_catalog
