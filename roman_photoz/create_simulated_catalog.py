@@ -320,11 +320,12 @@ class SimulatedCatalog:
     ):
         """
         Add a Gaussian error to each magnitude column in the catalog.
-
+        
         For each magnitude column, this method adds:
-        - Gaussian noise with a mean equal to the original value and a standard deviation of `mag_noise`.
-        - An error column (`<magnitude_column>_err`) with values sampled from a Gaussian distribution
-          with a mean of 0 and a standard deviation of `mag_err`.
+        
+        + a Gaussian noise with a mean equal to the original value and a standard deviation of `mag_noise`
+        
+        + an error column (`<magnitude_column>_err`) with values sampled from a Gaussian distribution with a mean of 0 and a standard deviation of `mag_err`.
 
         Parameters
         ----------
