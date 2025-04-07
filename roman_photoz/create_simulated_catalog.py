@@ -11,8 +11,8 @@ from numpy.lib import recfunctions as rfn
 from rail.core.stage import RailStage
 from roman_datamodels import datamodels as rdm
 
-from . import create_roman_filters
-from .default_config_file import default_roman_config
+from roman_photoz import create_roman_filters
+from roman_photoz.default_config_file import default_roman_config
 
 ROMAN_DEFAULT_CONFIG = default_roman_config
 
@@ -101,9 +101,16 @@ class SimulatedCatalog:
 
     def get_filters(self):
         """
-        Get the filter files for the Roman telescope.
+        Retrieve or create filter files for the Roman telescope.
 
-        If the filter files are not present, create them.
+        This method checks if the required filter files are present in the specified directory.
+        If not, it generates them using the `create_roman_filters` module. It also initializes
+        the filter library using the LePhare configuration.
+
+        Raises
+        ------
+        FileNotFoundError
+            If the filter files cannot be created or found.
         """
         filter_files_present = self.is_folder_not_empty(
             Path(self.lephare_config["FILTER_REP"], "roman"), "roman_"
@@ -120,7 +127,15 @@ class SimulatedCatalog:
 
     def create_simulated_data(self):
         """
-        Create simulated data using the LePhare configuration.
+        Generate simulated data using the LePhare configuration.
+
+        This method prepares the LePhare environment and generates simulated data
+        for galaxies, stars, and quasars based on the provided configuration.
+
+        Raises
+        ------
+        RuntimeError
+            If the LePhare preparation fails or the configuration is invalid.
         """
         star_overrides = {}
         qso_overrides = {}

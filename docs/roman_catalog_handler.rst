@@ -2,48 +2,15 @@
 Roman Catalog Handler
 =====================
 
-Overview
---------
-
-The ``roman_catalog_handler`` module provides functionality for handling catalog data from the Roman Space Telescope. It includes the ``RomanCatalogHandler`` class which offers methods for reading, formatting, and processing catalog data files.
+The ``roman_catalog_handler`` module provides functionality for handling catalog data from the Roman Space Telescope.
 
 Module API
 ----------
 
-.. py:module:: roman_catalog_handler
-
-.. py:class:: RomanCatalogHandler(catname='')
-
-    A class to handle Roman catalog operations including reading, formatting, and processing.
-
-    :param str catname: The name of the catalog file. Defaults to an empty string.
-
-    .. py:method:: __init__(catname='')
-
-        Initialize the RomanCatalogHandler with a catalog name.
-
-        :param str catname: The name of the catalog file. Defaults to an empty string.
-
-    .. py:method:: read_catalog()
-
-        Read the catalog file and convert it to a numpy structured array.
-
-        :return: The catalog data as a numpy array
-        :rtype: numpy.ndarray
-
-    .. py:method:: format_catalog()
-
-        Format the catalog by appending necessary fields and columns.
-
-        :return: The formatted catalog
-        :rtype: numpy.ndarray
-
-    .. py:method:: process()
-
-        Process the catalog by reading and formatting it.
-
-        :return: The formatted catalog
-        :rtype: numpy.ndarray
+.. automodule:: roman_catalog_handler
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 Usage Examples
 --------------
