@@ -16,6 +16,9 @@ from rail.core.stage import RailStage
 from rail.estimation.algos.lephare import LephareEstimator, LephareInformer
 
 from roman_photoz.default_config_file import default_roman_config
+
+# Import logger directly from the logger module instead of from roman_photoz
+from roman_photoz.logger import logger
 from roman_photoz.roman_catalog_handler import RomanCatalogHandler
 
 DS = RailStage.data_store
@@ -67,7 +70,11 @@ class RomanCatalogProcess:
         # set attributes used for determining the redshift
         self.flux_cols: list = []
         self.flux_err_cols: list = []
-        self.inform_stage = None
+        # check if the informer model file exists
+        self.informer_model_path = Path(LEPHAREWORK, "roman_model.pkl").as_posix()
+        self.informer_model_exists = os.path.exists(self.informer_model_path)
+        if self.informer_model_exists:
+            self.inform_stage = None
         self.estimated = None
         # read in the elements from default_roman_output.para
         default_output_file = Path(
@@ -147,7 +154,7 @@ class RomanCatalogProcess:
         """
         # get information about Roman filters
         bands = self.config["FILTER_LIST"].split(",")
-        print(len(bands))
+        logger.info(f"Processing {len(bands)} bands")
 
         # loop over the filters we want to keep to get
         # the number of the filter, n, and the name, b
@@ -213,10 +220,14 @@ class RomanCatalogProcess:
         #    and provide as “output” a QPEnsemble, with per-object p(z).
         # |we use rail's interface here to create the estimator stage
         # |https://rail-hub.readthedocs.io/en/latest/api/rail.estimation.estimator.html
+        if self.informer_model_exists:
+            model = self.informer_model_path
+        else:
+            model = self.inform_stage.get_handle("model")
         estimate_lephare = LephareEstimator.make_stage(
             name="estimate_roman",
             nondetect_val=np.nan,
-            model=self.inform_stage.get_handle("model"),
+            model=model,
             hdf5_groupname="",
             aliases=dict(input="test_data", output="lephare_estim"),
             bands=self.flux_cols,
@@ -254,13 +265,14 @@ class RomanCatalogProcess:
         if self.estimated is not None:
             ancil_data = self.estimated.data.ancil
         else:
+            logger.error("No results to save.")
             raise ValueError("No results to save.")
 
         tree = {"roman_photoz_results": ancil_data}
         with AsdfFile(tree) as af:
             af.write_to(output_filename)
 
-        print(f"Results saved to {output_filename}")
+        logger.info(f"Results saved to {output_filename}")
 
     def process(
         self,
@@ -289,7 +301,11 @@ class RomanCatalogProcess:
         cat_data = self.get_data(input_filename=input_filename, input_path=input_path)
 
         self.format_data(cat_data)
-        self.create_informer_stage()
+        if not self.informer_model_exists:
+            logger.warning(
+                "The informer model file does not exist. Creating a new one..."
+            )
+            self.create_informer_stage()
         self.create_estimator_stage()
 
         if save_results:
@@ -305,6 +321,7 @@ def main(argv=None):
     argv : list, optional
         List of command-line arguments.
     """
+    logger.info("Starting Roman catalog processing...")
     if argv is None:
         # skip the first argument (script name)
         argv = sys.argv[1:]
@@ -350,14 +367,16 @@ def main(argv=None):
 
     args = parser.parse_args(argv)
 
-    rcp = RomanCatalogProcess(config_filename=args.config_filename)
-
-    rcp.process(
-        input_filename=args.input_filename,
-        input_path=args.input_path,
-        output_filename=args.output_filename,
-        output_path=args.output_path,
-        save_results=args.save_results,
-    )
-
-    print("Done.")
+    try:
+        rcp = RomanCatalogProcess(config_filename=args.config_filename)
+        rcp.process(
+            input_filename=args.input_filename,
+            input_path=args.input_path,
+            output_filename=args.output_filename,
+            output_path=args.output_path,
+            save_results=args.save_results,
+        )
+        logger.info("Processing completed successfully.")
+    except Exception as e:
+        logger.exception("An error occurred during processing: %s", str(e))
+        sys.exit(1)
