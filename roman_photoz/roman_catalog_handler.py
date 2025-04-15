@@ -5,7 +5,6 @@ import numpy as np
 from roman_datamodels import datamodels as rdm
 
 from roman_photoz.default_config_file import default_roman_config
-
 from roman_photoz.logger import logger
 
 

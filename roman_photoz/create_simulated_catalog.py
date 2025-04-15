@@ -303,7 +303,9 @@ class SimulatedCatalog:
         output_filename = output_filename
         self.roman_catalog_template.save(output_filename, dir_path=output_path)
 
-        logger.info(f"Saved simulated input catalog to {output_path}/{output_filename}.")
+        logger.info(
+            f"Saved simulated input catalog to {output_path}/{output_filename}."
+        )
 
     def add_ids(self, catalog):
         """
