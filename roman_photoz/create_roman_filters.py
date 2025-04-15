@@ -7,6 +7,8 @@ import requests
 from lephare.data_retrieval import get_auxiliary_data
 from lephare.filter import Filter  # type: ignore
 
+from roman_photoz.logger import logger
+
 # date of the file
 DEFAULT_FILE_DATE = "20210614"
 
@@ -28,11 +30,13 @@ def download_file(url: str, dest: str):
     dest : str
         The destination path where the file will be saved.
     """
+    logger.info(f"Downloading file from {url} to {dest}")
     response = requests.get(url, timeout=30)
     # check if the request was successful
     response.raise_for_status()
     with open(dest, "wb") as file:
         file.write(response.content)
+    logger.info("Download completed successfully")
 
 
 def read_effarea_file(filename: str = "", **kwargs) -> pd.DataFrame:
@@ -157,7 +161,7 @@ def create_path(filepath: str = "") -> Path:
         # save files to custom path
         path = Path(filepath).resolve()
     # create path if they don't exist
-    print("Creating directory structure...")
+    logger.info("Creating directory structure...")
     path.mkdir(parents=True, exist_ok=True)
     return path
 
@@ -221,4 +225,4 @@ if __name__ == "__main__":
 
     run(input_filename=input_filename, input_path=input_path)
 
-    print("Done.")
+    logger.info("Filter creation process completed successfully.")

@@ -6,7 +6,6 @@ from roman_datamodels import datamodels as rdm
 
 from roman_photoz.default_config_file import default_roman_config
 
-# Import logger directly from the logger module instead of from roman_photoz
 from roman_photoz.logger import logger
 
 

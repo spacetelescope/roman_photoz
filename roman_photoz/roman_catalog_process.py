@@ -17,7 +17,6 @@ from rail.estimation.algos.lephare import LephareEstimator, LephareInformer
 
 from roman_photoz.default_config_file import default_roman_config
 
-# Import logger directly from the logger module instead of from roman_photoz
 from roman_photoz.logger import logger
 from roman_photoz.roman_catalog_handler import RomanCatalogHandler
 
