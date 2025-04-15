@@ -20,6 +20,8 @@ argv = [
     output_path,
     "--output_filename",
     "output_file_1.asdf",
+    "--model_filename",  # New parameter for custom model filename
+    "roman_model_v1.pkl",  # Using a custom model filename
     "--save_results",
     "True",
 ]

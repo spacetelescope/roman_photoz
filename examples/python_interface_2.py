@@ -10,41 +10,23 @@ from roman_photoz.roman_catalog_process import RomanCatalogProcess
 # where this script is located
 output_path = Path(__file__).resolve().parent.as_posix()
 
-# we will use the default Roman config
-# and the default input path/filename
-# we will save the results
-# to a file called "output_file_2.asdf"
-argv = [
-    "--config_filename",
-    default_roman_config,
-    "--input_path",
-    "/Users/mteodoro/Library/Caches/lephare/work/",
-    "--input_filename",
-    "roman_simulated_catalog.asdf",
-    "--output_path",
-    output_path,
-    "--output_filename",
-    "output_file_2.asdf",
-    "--save_results",
-    "True",
-]
-
 ####
-# this approach will process the catalog
-# and save the results to a file
-# and will return an instance of RomanCatalogProcess
-# that contains the results
+# This example shows how to create a RomanCatalogProcess instance directly 
+# with a custom model filename and use it to process a catalog
 
-# create a RomanCatalogProcess object
-rcp = RomanCatalogProcess(config_filename=argv[1])
+# create a RomanCatalogProcess object with a custom model filename
+rcp = RomanCatalogProcess(
+    config_filename=default_roman_config,
+    model_filename="custom_roman_model.pkl"  # Using a custom model filename
+)
 
-# and process the catalog
+# process the catalog
 rcp.process(
-    input_path=argv[3],
-    input_filename=argv[5],
-    output_path=argv[7],
-    output_filename=argv[9],
-    save_results=argv[11],
+    input_path="/Users/mteodoro/Library/Caches/lephare/work/",
+    input_filename="roman_simulated_catalog.asdf",
+    output_path=output_path,
+    output_filename="output_file_2.asdf",
+    save_results=True,
 )
 
 # plot the estimated PDF for the first object

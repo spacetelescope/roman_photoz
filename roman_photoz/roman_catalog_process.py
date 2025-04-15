@@ -51,9 +51,11 @@ class RomanCatalogProcess:
         Informer stage for creating the library of SEDs.
     estimated : RailStage
         Estimator stage for finding the best fits from the library.
+    model_filename : str
+        Name of the pickle model file.
     """
 
-    def __init__(self, config_filename: Union[dict, str] = ""):
+    def __init__(self, config_filename: Union[dict, str] = "", model_filename: str = "roman_model.pkl"):
         """
         Initialize the RomanCatalogProcess instance.
 
@@ -61,18 +63,19 @@ class RomanCatalogProcess:
         ----------
         config_filename : Union[dict, str], optional
             Path to the configuration file or a configuration dictionary.
+        model_filename : str, optional
+            Name of the pickle model file (default: "roman_model.pkl").
         """
         self.data: dict = OrderedDict()
         # set configuration file (roman will have its own)
         self.set_config_file(config_filename)
+        # set model filename
+        self.model_filename = model_filename
+        self.informer_model_path = Path(LEPHAREWORK, self.model_filename).as_posix()
         # set attributes used for determining the redshift
         self.flux_cols: list = []
         self.flux_err_cols: list = []
-        # check if the informer model file exists
-        self.informer_model_path = Path(LEPHAREWORK, "roman_model.pkl").as_posix()
-        self.informer_model_exists = os.path.exists(self.informer_model_path)
-        if self.informer_model_exists:
-            self.inform_stage = None
+        self.inform_stage = None
         self.estimated = None
         # read in the elements from default_roman_output.para
         default_output_file = Path(
@@ -176,7 +179,7 @@ class RomanCatalogProcess:
         """
         # use the inform stage to create the library of SEDs with
         # various redshifts, extinction parameters, and reddening values.
-        # -> Informer will produce as output a generic “model”,
+        # -> Informer will produce as output a generic "model",
         #    the details of which depends on the sub-class.
         # |we use rail's interface here to create the informer stage
         # |https://rail-hub.readthedocs.io/en/latest/api/rail.estimation.informer.html
@@ -193,7 +196,7 @@ class RomanCatalogProcess:
         self.inform_stage = LephareInformer.make_stage(
             name="inform_roman",
             nondetect_val=np.nan,
-            model=f"{Path(LEPHAREWORK, 'roman_model.pkl').as_posix()}",
+            model=self.informer_model_path,
             hdf5_groupname="",
             lephare_config=self.config,
             star_config=None,
@@ -214,8 +217,8 @@ class RomanCatalogProcess:
         # take the sythetic test data, and find the best
         # fits from the library. This results in a PDF, zmode,
         # and zmean for each input test data.
-        # -> Estimators use a generic “model”, apply the photo-z estimation
-        #    and provide as “output” a QPEnsemble, with per-object p(z).
+        # -> Estimators use a generic "model", apply the photo-z estimation
+        #    and provide as "output" a QPEnsemble, with per-object p(z).
         # |we use rail's interface here to create the estimator stage
         # |https://rail-hub.readthedocs.io/en/latest/api/rail.estimation.estimator.html
         if self.informer_model_exists:
@@ -309,6 +312,21 @@ class RomanCatalogProcess:
         if save_results:
             self.save_results(output_filename=output_filename, output_path=output_path)
 
+    @property
+    def informer_model_exists(self):
+        """
+        Check if the informer model file exists.
+
+        Returns
+        -------
+        bool
+            True if the model file exists, False otherwise.
+        """
+        if os.path.exists(self.informer_model_path):
+            logger.info(f"The informer model file {self.informer_model_path} exists. Using it...")
+            return True
+        return False
+
 
 def main(argv=None):
     """
@@ -330,6 +348,13 @@ def main(argv=None):
         type=str,
         default="",
         help="Path to the configuration file (default: use default Roman config).",
+        required=False,
+    )
+    parser.add_argument(
+        "--model_filename",
+        type=str,
+        default="roman_model.pkl",
+        help="Name of the pickle model file (default: roman_model.pkl).",
         required=False,
     )
     parser.add_argument(
@@ -366,7 +391,10 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     try:
-        rcp = RomanCatalogProcess(config_filename=args.config_filename)
+        rcp = RomanCatalogProcess(
+            config_filename=args.config_filename,
+            model_filename=args.model_filename
+        )
         rcp.process(
             input_filename=args.input_filename,
             input_path=args.input_path,
