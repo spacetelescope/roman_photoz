@@ -5,6 +5,7 @@ import numpy as np
 from roman_datamodels import datamodels as rdm
 
 from roman_photoz.default_config_file import default_roman_config
+from roman_photoz.logger import logger
 
 
 class RomanCatalogHandler:
@@ -43,7 +44,7 @@ class RomanCatalogHandler:
         """
         Format the catalog by appending necessary fields and columns.
         """
-        print("Formatting catalog...")
+        logger.info("Formatting catalog...")
         # self.format_colnames()
 
         self.catalog = self.cat_array[["id"]].copy()
@@ -79,19 +80,19 @@ class RomanCatalogHandler:
             self.cat_array["string_data"].astype(str),
             usemask=False,
         )
-        print("Done.")
+        logger.info("Catalog formatting completed.")
 
     def read_catalog(self):
         """
         Read the catalog file and convert it to a numpy structured array.
         """
-        print(f"Parsing catalog {self.cat_name}...")
+        logger.info(f"Parsing catalog {self.cat_name}...")
         dm = rdm.open(self.cat_name)
         self.cat_array = (
             dm.source_catalog.as_array()
         )  # Convert Table to numpy structured array
 
-        print("Done.")
+        logger.info("Catalog parsing completed.")
 
     def process(self):
         """
@@ -109,6 +110,7 @@ class RomanCatalogHandler:
 
 
 if __name__ == "__main__":
+    from roman_photoz import logger
 
     test_bigdata = os.getenv("TEST_BIGDATA")
     if test_bigdata is None:
@@ -121,4 +123,4 @@ if __name__ == "__main__":
 
     catalog_handler.process()
 
-    print("Done.")
+    logger.info("Processing complete.")
