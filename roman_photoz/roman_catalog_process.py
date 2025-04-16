@@ -16,6 +16,7 @@ from rail.core.stage import RailStage
 from rail.estimation.algos.lephare import LephareEstimator, LephareInformer
 
 from roman_photoz.default_config_file import default_roman_config
+from roman_photoz.logger import logger
 from roman_photoz.roman_catalog_handler import RomanCatalogHandler
 
 DS = RailStage.data_store
@@ -50,9 +51,15 @@ class RomanCatalogProcess:
         Informer stage for creating the library of SEDs.
     estimated : RailStage
         Estimator stage for finding the best fits from the library.
+    model_filename : str
+        Name of the pickle model file.
     """
 
-    def __init__(self, config_filename: Union[dict, str] = ""):
+    def __init__(
+        self,
+        config_filename: Union[dict, str] = "",
+        model_filename: str = "roman_model.pkl",
+    ):
         """
         Initialize the RomanCatalogProcess instance.
 
@@ -60,10 +67,15 @@ class RomanCatalogProcess:
         ----------
         config_filename : Union[dict, str], optional
             Path to the configuration file or a configuration dictionary.
+        model_filename : str, optional
+            Name of the pickle model file (default: "roman_model.pkl").
         """
         self.data: dict = OrderedDict()
         # set configuration file (roman will have its own)
         self.set_config_file(config_filename)
+        # set model filename
+        self.model_filename = model_filename
+        self.informer_model_path = Path(LEPHAREWORK, self.model_filename).as_posix()
         # set attributes used for determining the redshift
         self.flux_cols: list = []
         self.flux_err_cols: list = []
@@ -147,7 +159,7 @@ class RomanCatalogProcess:
         """
         # get information about Roman filters
         bands = self.config["FILTER_LIST"].split(",")
-        print(len(bands))
+        logger.info(f"Processing {len(bands)} bands")
 
         # loop over the filters we want to keep to get
         # the number of the filter, n, and the name, b
@@ -171,7 +183,7 @@ class RomanCatalogProcess:
         """
         # use the inform stage to create the library of SEDs with
         # various redshifts, extinction parameters, and reddening values.
-        # -> Informer will produce as output a generic “model”,
+        # -> Informer will produce as output a generic "model",
         #    the details of which depends on the sub-class.
         # |we use rail's interface here to create the informer stage
         # |https://rail-hub.readthedocs.io/en/latest/api/rail.estimation.informer.html
@@ -188,7 +200,7 @@ class RomanCatalogProcess:
         self.inform_stage = LephareInformer.make_stage(
             name="inform_roman",
             nondetect_val=np.nan,
-            model=f"{Path(LEPHAREWORK, 'roman_model.pkl').as_posix()}",
+            model=self.informer_model_path,
             hdf5_groupname="",
             lephare_config=self.config,
             star_config=None,
@@ -209,14 +221,18 @@ class RomanCatalogProcess:
         # take the sythetic test data, and find the best
         # fits from the library. This results in a PDF, zmode,
         # and zmean for each input test data.
-        # -> Estimators use a generic “model”, apply the photo-z estimation
-        #    and provide as “output” a QPEnsemble, with per-object p(z).
+        # -> Estimators use a generic "model", apply the photo-z estimation
+        #    and provide as "output" a QPEnsemble, with per-object p(z).
         # |we use rail's interface here to create the estimator stage
         # |https://rail-hub.readthedocs.io/en/latest/api/rail.estimation.estimator.html
+        if self.informer_model_exists:
+            model = self.informer_model_path
+        else:
+            model = self.inform_stage.get_handle("model")
         estimate_lephare = LephareEstimator.make_stage(
             name="estimate_roman",
             nondetect_val=np.nan,
-            model=self.inform_stage.get_handle("model"),
+            model=model,
             hdf5_groupname="",
             aliases=dict(input="test_data", output="lephare_estim"),
             bands=self.flux_cols,
@@ -254,13 +270,14 @@ class RomanCatalogProcess:
         if self.estimated is not None:
             ancil_data = self.estimated.data.ancil
         else:
+            logger.error("No results to save.")
             raise ValueError("No results to save.")
 
         tree = {"roman_photoz_results": ancil_data}
         with AsdfFile(tree) as af:
             af.write_to(output_filename)
 
-        print(f"Results saved to {output_filename}")
+        logger.info(f"Results saved to {output_filename}")
 
     def process(
         self,
@@ -289,32 +306,58 @@ class RomanCatalogProcess:
         cat_data = self.get_data(input_filename=input_filename, input_path=input_path)
 
         self.format_data(cat_data)
-        self.create_informer_stage()
+        if not self.informer_model_exists:
+            logger.warning(
+                "The informer model file does not exist. Creating a new one..."
+            )
+            self.create_informer_stage()
         self.create_estimator_stage()
 
         if save_results:
             self.save_results(output_filename=output_filename, output_path=output_path)
 
+    @property
+    def informer_model_exists(self):
+        """
+        Check if the informer model file exists.
 
-def main(argv=None):
+        Returns
+        -------
+        bool
+            True if the model file exists, False otherwise.
+        """
+        if os.path.exists(self.informer_model_path):
+            logger.info(
+                f"The informer model file {self.informer_model_path} exists. Using it..."
+            )
+            return True
+        return False
+
+
+def _get_parser():
     """
-    Main function to process Roman catalog data.
+    Create and return the argument parser for the roman_photoz command-line interface.
 
-    Parameters
-    ----------
-    argv : list, optional
-        List of command-line arguments.
+    This function is used by both the main function and the Sphinx documentation.
+
+    Returns
+    -------
+    argparse.ArgumentParser
+        The configured argument parser
     """
-    if argv is None:
-        # skip the first argument (script name)
-        argv = sys.argv[1:]
-
     parser = argparse.ArgumentParser(description="Process Roman catalog data.")
     parser.add_argument(
         "--config_filename",
         type=str,
         default="",
         help="Path to the configuration file (default: use default Roman config).",
+        required=False,
+    )
+    parser.add_argument(
+        "--model_filename",
+        type=str,
+        default="roman_model.pkl",
+        help="Name of the pickle model file (default: roman_model.pkl).",
         required=False,
     )
     parser.add_argument(
@@ -347,17 +390,38 @@ def main(argv=None):
         default=True,
         help="Save results? (default: True).",
     )
+    return parser
 
+
+def main(argv=None):
+    """
+    Main function to process Roman catalog data.
+
+    Parameters
+    ----------
+    argv : list, optional
+        List of command-line arguments.
+    """
+    logger.info("Starting Roman catalog processing...")
+    if argv is None:
+        # skip the first argument (script name)
+        argv = sys.argv[1:]
+
+    parser = _get_parser()
     args = parser.parse_args(argv)
 
-    rcp = RomanCatalogProcess(config_filename=args.config_filename)
-
-    rcp.process(
-        input_filename=args.input_filename,
-        input_path=args.input_path,
-        output_filename=args.output_filename,
-        output_path=args.output_path,
-        save_results=args.save_results,
-    )
-
-    print("Done.")
+    try:
+        rcp = RomanCatalogProcess(
+            config_filename=args.config_filename, model_filename=args.model_filename
+        )
+        rcp.process(
+            input_filename=args.input_filename,
+            input_path=args.input_path,
+            output_filename=args.output_filename,
+            output_path=args.output_path,
+            save_results=args.save_results,
+        )
+        logger.info("Processing completed successfully.")
+    except Exception as e:
+        logger.exception("An error occurred during processing: %s", str(e))
+        sys.exit(1)

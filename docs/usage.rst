@@ -13,35 +13,20 @@ To use `roman_photoz`, follow these steps:
         import numpy as np
         from roman_photoz.roman_catalog_process import RomanCatalogProcess
 
-        argv = [
-            "--input_path",
-            "/path/to/input/file/",
-            "--input_filename",
-            "roman_simulated_catalog.asdf",
-            "--output_path",
-            "/path/to/output/file/",
-            "--output_filename",
-            "output_filename.asdf",
-            "--save_results",
-            "True",
-        ]
+        # create a RomanCatalogProcess object with default configuration
+        # and custom model filename
+        rcp = RomanCatalogProcess(
+            config_filename="",  # use default config
+            model_filename="custom_model.pkl"  # specify custom model filename
+        )
 
-        ####
-        # this approach will process the catalog
-        # and save the results to a file
-        # and will return an instance of RomanCatalogProcess
-        # that contains the results
-
-        # create a RomanCatalogProcess object
-        rcp = RomanCatalogProcess(config_filename=argv[1])
-
-        # and process the catalog
+        # process the catalog
         rcp.process(
-            input_path=argv[3],
-            input_filename=argv[5],
-            output_path=argv[7],
-            output_filename=argv[9],
-            save_results=argv[11],
+            input_path="/path/to/input/file/",
+            input_filename="roman_simulated_catalog.asdf",
+            output_path="/path/to/output/file/",
+            output_filename="output_filename.asdf",
+            save_results=True,
         )
 
         # examples of visualization
@@ -62,6 +47,8 @@ To use `roman_photoz`, follow these steps:
         from roman_photoz import roman_catalog_process
 
         argv = [
+            "--model_filename",
+            "custom_model.pkl",
             "--input_path",
             "/path/to/input/file/",
             "--input_filename",
@@ -80,4 +67,4 @@ To use `roman_photoz`, follow these steps:
 
     .. code-block:: bash
 
-        python -m roman_photoz --input_path=/path/to/input/file/ --input_filename=roman_simulated_catalog.asdf --output_path=/path/to/output/file/ --output_filename=output_filename.asdf --save_results=True
+        python -m roman_photoz --model_filename=custom_model.pkl --input_path=/path/to/input/file/ --input_filename=roman_simulated_catalog.asdf --output_path=/path/to/output/file/ --output_filename=output_filename.asdf --save_results=True
