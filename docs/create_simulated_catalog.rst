@@ -29,16 +29,28 @@ The module can also be executed as a standalone script to create a simulated cat
 
 .. code-block:: bash
 
-   python create_simulated_catalog.py --output_path /path/to/output --output_filename my_catalog.asdf
+   python cm roman_photoz.reate_simulated_catalog. --output_path=/path/to/output/ --output_filename=simulated_catalog.asdf
 
-Dependencies
-------------
+Usage Examples
+-------------
 
-- ``argparse``
-- ``os``
-- ``collections.OrderedDict``
-- ``pathlib.Path``
-- ``lephare``
-- ``numpy``
-- ``rail.core.stage``
-- ``roman_datamodels``
+The following example demonstrates how to programmatically create a simulated catalog:
+
+.. code-block:: python
+
+    from roman_photoz.create_simulated_catalog import CreateSimulatedCatalog
+
+    # Initialize the catalog creator with default parameters
+    creator = CreateSimulatedCatalog()
+
+    # Create a simulated catalog with 100 sources
+    catalog = creator.create_catalog(n_sources=100)
+
+    # Save the catalog to a file
+    creator.save_catalog(
+        catalog,
+        output_path="/path/to/output/",
+        output_filename="simulated_catalog.asdf"
+    )
+
+    print(f"Simulated catalog with {len(catalog)} sources created successfully")

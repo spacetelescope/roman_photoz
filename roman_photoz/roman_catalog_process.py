@@ -55,7 +55,11 @@ class RomanCatalogProcess:
         Name of the pickle model file.
     """
 
-    def __init__(self, config_filename: Union[dict, str] = "", model_filename: str = "roman_model.pkl"):
+    def __init__(
+        self,
+        config_filename: Union[dict, str] = "",
+        model_filename: str = "roman_model.pkl",
+    ):
         """
         Initialize the RomanCatalogProcess instance.
 
@@ -323,25 +327,24 @@ class RomanCatalogProcess:
             True if the model file exists, False otherwise.
         """
         if os.path.exists(self.informer_model_path):
-            logger.info(f"The informer model file {self.informer_model_path} exists. Using it...")
+            logger.info(
+                f"The informer model file {self.informer_model_path} exists. Using it..."
+            )
             return True
         return False
 
 
-def main(argv=None):
+def _get_parser():
     """
-    Main function to process Roman catalog data.
+    Create and return the argument parser for the roman_photoz command-line interface.
 
-    Parameters
-    ----------
-    argv : list, optional
-        List of command-line arguments.
+    This function is used by both the main function and the Sphinx documentation.
+
+    Returns
+    -------
+    argparse.ArgumentParser
+        The configured argument parser
     """
-    logger.info("Starting Roman catalog processing...")
-    if argv is None:
-        # skip the first argument (script name)
-        argv = sys.argv[1:]
-
     parser = argparse.ArgumentParser(description="Process Roman catalog data.")
     parser.add_argument(
         "--config_filename",
@@ -387,13 +390,29 @@ def main(argv=None):
         default=True,
         help="Save results? (default: True).",
     )
+    return parser
 
+
+def main(argv=None):
+    """
+    Main function to process Roman catalog data.
+
+    Parameters
+    ----------
+    argv : list, optional
+        List of command-line arguments.
+    """
+    logger.info("Starting Roman catalog processing...")
+    if argv is None:
+        # skip the first argument (script name)
+        argv = sys.argv[1:]
+
+    parser = _get_parser()
     args = parser.parse_args(argv)
 
     try:
         rcp = RomanCatalogProcess(
-            config_filename=args.config_filename,
-            model_filename=args.model_filename
+            config_filename=args.config_filename, model_filename=args.model_filename
         )
         rcp.process(
             input_filename=args.input_filename,

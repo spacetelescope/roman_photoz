@@ -11,13 +11,13 @@ from roman_photoz.roman_catalog_process import RomanCatalogProcess
 output_path = Path(__file__).resolve().parent.as_posix()
 
 ####
-# This example shows how to create a RomanCatalogProcess instance directly 
+# This example shows how to create a RomanCatalogProcess instance directly
 # with a custom model filename and use it to process a catalog
 
 # create a RomanCatalogProcess object with a custom model filename
 rcp = RomanCatalogProcess(
     config_filename=default_roman_config,
-    model_filename="custom_roman_model.pkl"  # Using a custom model filename
+    model_filename="custom_roman_model.pkl",  # Using a custom model filename
 )
 
 # process the catalog
