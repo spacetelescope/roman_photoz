@@ -6,6 +6,18 @@ The ``roman_photoz`` package provides tools for processing catalogs
 produced by the Roman Space Telescope Calibration Pipeline (``romancal``)
 to estimate photometric redshift.
 
+Overview
+--------
+
+The Roman Space Telescope will produce large catalogs of astronomical objects.
+This package provides tools for processing these catalogs to estimate photometric
+redshifts. Key features include:
+
+* Processing Roman catalog data in ASDF format
+* Creating filter definitions based on Roman Space Telescope specifications
+* Generating simulated catalogs for development and testing
+* Estimating photometric redshifts using LePhare
+
 .. toctree::
    :maxdepth: 2
    :caption: Contents
