@@ -7,7 +7,7 @@ The ``roman_catalog_handler`` module provides functionality for handling catalog
 Module API
 ----------
 
-.. automodule:: roman_catalog_handler
+.. automodule:: roman_photoz.roman_catalog_handler
    :members:
    :undoc-members:
    :show-inheritance:
@@ -20,7 +20,7 @@ The following example demonstrates how to use the `RomanCatalogHandler` class to
 
      import os
      from pathlib import Path
-     from roman_catalog_handler import RomanCatalogHandler
+     from roman_photoz.roman_catalog_handler import RomanCatalogHandler
 
      # Ensure the TEST_BIGDATA environment variable is set
      test_bigdata = os.getenv("TEST_BIGDATA")
