@@ -7,7 +7,7 @@ import os
 import sys
 
 # Add the project directory to sys.path
-sys.path.insert(0, os.path.abspath("../roman_photoz"))
+sys.path.insert(0, os.path.abspath(".."))
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
@@ -22,6 +22,7 @@ author = "STScI"
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
+    "sphinxarg.ext",  # For automatic documentation of argparse arguments
 ]
 
 templates_path = ["_templates"]
