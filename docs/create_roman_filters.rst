@@ -25,4 +25,3 @@ To use this module, run it as a script with the following command:
 - `<input_filename>`: The filename containing the monochromatic effective area of each filter per column.
 
 The script will generate individual filter files and a configuration file (`roman_phot.par`) for use with `rail+lephare`.
-
