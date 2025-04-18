@@ -7,7 +7,7 @@ This module provides functionality for processing catalog data related to the Ro
 Module API
 ----------
 
-.. automodule:: roman_catalog_process
+.. automodule:: roman_photoz.roman_catalog_process
    :members:
    :undoc-members:
    :show-inheritance:
@@ -17,7 +17,7 @@ Examples
 
 Basic usage::
 
-    from roman_catalog_process import process_catalog
+    from roman_photoz.roman_catalog_process import process_catalog
 
     process_catalog('input_catalog.fits', 'processed_catalog.fits')
 
