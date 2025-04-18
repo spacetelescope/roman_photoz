@@ -19,10 +19,10 @@ The module can also be executed as a standalone script to create a simulated cat
 
 **Arguments**
 
-- ``--output_path`` (:class:`str`)  
+- ``--output_path`` (:class:`str`)
   Path to save the output catalog (default: ``LEPHAREWORK``).
 
-- ``--output_filename`` (:class:`str`)  
+- ``--output_filename`` (:class:`str`)
   Filename for the output catalog (default: ``roman_simulated_catalog.asdf``).
 
 **Example**
