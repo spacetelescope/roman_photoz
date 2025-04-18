@@ -17,6 +17,7 @@ from rail.estimation.algos.lephare import LephareEstimator, LephareInformer
 
 from roman_photoz.default_config_file import default_roman_config
 from roman_photoz.roman_catalog_handler import RomanCatalogHandler
+from roman_photoz.logger import logger
 
 DS = RailStage.data_store
 DS.__class__.allow_overwrite = True
@@ -124,6 +125,7 @@ class RomanCatalogProcess:
         """
         # full qualified path to the catalog file
         filename = Path(input_path, input_filename).as_posix()
+        logger.info(f"Reading catalog from {filename}")
 
         # read in catalog data
         if Path(filename).suffix == ".asdf":
@@ -147,7 +149,7 @@ class RomanCatalogProcess:
         """
         # get information about Roman filters
         bands = self.config["FILTER_LIST"].split(",")
-        print(len(bands))
+        logger.debug(f"Found {len(bands)} bands in filter list")
 
         # loop over the filters we want to keep to get
         # the number of the filter, n, and the name, b
@@ -164,6 +166,7 @@ class RomanCatalogProcess:
         self.data["string_data"] = np.array(cat_data[cat_data.colnames[-1]]).astype(
             bytes
         )
+        logger.info("Catalog data formatted successfully")
 
     def create_informer_stage(self):
         """
@@ -254,13 +257,14 @@ class RomanCatalogProcess:
         if self.estimated is not None:
             ancil_data = self.estimated.data.ancil
         else:
+            logger.error("No results to save")
             raise ValueError("No results to save.")
 
         tree = {"roman_photoz_results": ancil_data}
         with AsdfFile(tree) as af:
             af.write_to(output_filename)
 
-        print(f"Results saved to {output_filename}")
+        logger.info(f"Results saved to {output_filename}")
 
     def process(
         self,
@@ -350,6 +354,7 @@ def main(argv=None):
 
     args = parser.parse_args(argv)
 
+    logger.info("Starting Roman catalog processing")
     rcp = RomanCatalogProcess(config_filename=args.config_filename)
 
     rcp.process(
@@ -360,4 +365,4 @@ def main(argv=None):
         save_results=args.save_results,
     )
 
-    print("Done.")
+    logger.info("Roman catalog processing completed")

@@ -13,6 +13,7 @@ from roman_datamodels import datamodels as rdm
 
 from roman_photoz import create_roman_filters
 from roman_photoz.default_config_file import default_roman_config
+from roman_photoz.logger import logger
 
 ROMAN_DEFAULT_CONFIG = default_roman_config
 
@@ -116,12 +117,13 @@ class SimulatedCatalog:
             Path(self.lephare_config["FILTER_REP"], "roman"), "roman_"
         )
         if not filter_files_present:
+            logger.info("Filter files not found, generating them...")
             create_roman_filters.run()
 
         self.filter_lib = lp.FilterSvc.from_keymap(
             lp.all_types_to_keymap(self.lephare_config)
         )
-        print(
+        logger.info(
             f"Created filter library using the filter files in {self.lephare_config['FILTER_REP']}/roman."
         )
 
@@ -146,6 +148,7 @@ class SimulatedCatalog:
             "LIB_ASCII": "YES",
         }
 
+        logger.info("Preparing LePhare environment for simulated data generation...")
         lp.prepare(
             config=self.lephare_config,
             star_config=star_overrides,
@@ -154,6 +157,7 @@ class SimulatedCatalog:
         )
 
         self.simulated_data_filename = gal_overrides.get("GAL_LIB_OUT")
+        logger.info("Simulated data generated successfully")
 
     def create_simulated_input_catalog(
         self,
@@ -300,9 +304,9 @@ class SimulatedCatalog:
         """
         output_path = Path(output_path).as_posix()
         output_filename = output_filename
+        logger.info(f"Saving catalog to {output_path}/{output_filename}...")
         self.roman_catalog_template.save(output_filename, dir_path=output_path)
-
-        print(f"Saved simulated input catalog to {output_path}/{output_filename}.")
+        logger.info("Catalog saved successfully")
 
     def add_ids(self, catalog):
         """
@@ -462,7 +466,7 @@ class SimulatedCatalog:
             output_path=output_path,
         )
 
-        print("DONE")
+        logger.info("DONE")
 
 
 if __name__ == "__main__":
@@ -487,7 +491,9 @@ if __name__ == "__main__":
 
     args = parse_args()
 
+    logger.info("Starting simulated catalog creation...")
     rcp = SimulatedCatalog()
     rcp.process(args.output_path, args.output_filename)
+    logger.info("Simulated catalog creation completed successfully")
 
-    print("Done.")
+    logger.info("Done.")
