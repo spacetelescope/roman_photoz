@@ -13,7 +13,7 @@ Module API
    :show-inheritance:
 
 Command-line Interface
----------------------
+----------------------
 
 This module can be run as a command-line tool to generate filter definitions:
 
