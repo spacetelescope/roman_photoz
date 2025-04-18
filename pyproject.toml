@@ -54,7 +54,7 @@ docs = [
     "stsci-rtd-theme",
     "sphinx-autobuild",
     "tomli; python_version <=\"3.11\"",
-    "sphinxarg",
+    "sphinx-argparse",
 ]
 test = [
     "ci-watson >=0.5.0",
