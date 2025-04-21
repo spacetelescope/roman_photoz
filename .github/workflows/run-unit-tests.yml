@@ -34,10 +34,7 @@ jobs:
       - name: Run unit tests with coverage
         run: pytest --cov=. --cov-report=xml:coverage.xml
 
-      - name: Publish Code Coverage Summary
-        uses: irongut/CodeCoverageSummary@v1.0.2
+      - name: pytest coverage comment
+        uses: MishaKav/pytest-coverage-comment@main
         with:
-          filename: coverage.xml
-          badge: true
-          format: markdown
-          output: both
+          pytest-coverage-path: ./coverage.xml
