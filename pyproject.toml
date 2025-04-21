@@ -134,19 +134,4 @@ archs = ["auto", "aarch64"]
 omit = [
     "*/tests/*",
     "*/docs/*",
-    "*/__pycache__/*",
-    "*/roman_photoz.egg-info/*",
-    "*/scripts/*",
 ]
-
-[tool.coverage.report]
-show_missing = true
-skip_covered = true
-precision = 2
-fail_under = 70
-
-[tool.coverage.html]
-directory = "htmlcov"
-
-[tool.coverage.xml]
-output = "coverage.xml"
