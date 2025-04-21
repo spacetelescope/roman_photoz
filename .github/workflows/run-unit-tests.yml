@@ -32,9 +32,20 @@ jobs:
           pip install ".[dev]" pytest-cov
 
       - name: Run unit tests with coverage
-        run: pytest --cov=. --cov-report=xml:coverage.xml
+        run: pytest --cov=. --cov-report=xml:coverage.xml --junitxml=result.xml
 
       - name: pytest coverage comment
         uses: MishaKav/pytest-coverage-comment@main
         with:
-          pytest-coverage-path: ./coverage.xml
+          pytest-xml-coverage-path: ./coverage.xml
+          title: Coverage Report
+          badge-title: Coverage
+          hide-badge: false
+          hide-report: false
+          create-new-comment: false
+          hide-comment: false
+          report-only-changed-files: false
+          remove-link-from-badge: false
+          unique-id-for-comment: python3.8
+          junitxml-path: ./result.xml
+          junitxml-title: Summary
