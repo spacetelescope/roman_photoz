@@ -9,7 +9,7 @@ on:
       - main
 
 permissions:
-  contents: write
+  contents: read
   checks: write
   pull-requests: write
 
@@ -41,20 +41,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pytest --cov=. --cov-report=xml:coverage.xml --junitxml=result.xml
 
-      - name: pytest coverage comment
-        uses: MishaKav/pytest-coverage-comment@main
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Pass the token for API access
-        with:
-          pytest-xml-coverage-path: coverage.xml
-          title: Coverage Report
-          badge-title: Coverage
-          hide-badge: false
-          hide-report: false
-          create-new-comment: false
-          hide-comment: false
-          report-only-changed-files: false
-          remove-link-from-badge: false
-          unique-id-for-comment: python3.8
-          junitxml-path: result.xml
-          junitxml-title: Summary
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
