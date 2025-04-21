@@ -43,5 +43,5 @@ jobs:
           files: ./coverage.xml
           flags: unittests
           name: codecov-umbrella
-          token: ${{ secrets.CODECOV_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           verbose: true
