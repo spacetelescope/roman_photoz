@@ -61,6 +61,7 @@ test = [
     "pytest-astropy >= 0.11.0",
     "deepdiff",
     "stpreview>=0.5.1",
+    "pytest-cov",
 ]
 dev = ["roman_photoz[docs,test]", "tox > 4", "pre-commit > 3"]
 sdp = ["stpreview>=0.5.1"]
@@ -130,3 +131,9 @@ archs = ["x86_64", "arm64"]
 
 [tool.cibuildwheel.linux]
 archs = ["auto", "aarch64"]
+
+[tool.coverage.run]
+omit = [
+    "*/tests/*",
+    "*/docs/*",
+]
