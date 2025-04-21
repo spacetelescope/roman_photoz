@@ -37,10 +37,14 @@ jobs:
           pip install ".[dev]" pytest-cov
 
       - name: Run unit tests with coverage
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pytest --cov=. --cov-report=xml:coverage.xml --junitxml=result.xml
 
       - name: pytest coverage comment
         uses: MishaKav/pytest-coverage-comment@main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Pass the token for API access
         with:
           pytest-xml-coverage-path: coverage.xml
           title: Coverage Report
