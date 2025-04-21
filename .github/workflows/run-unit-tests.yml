@@ -38,10 +38,10 @@ jobs:
 
       - name: Run unit tests with coverage
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         run: pytest --cov=. --cov-report=xml:coverage.xml --junitxml=result.xml
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
