@@ -11,7 +11,7 @@ Overview
 
 The Roman Space Telescope will produce large catalogs of astronomical objects.
 This package provides tools for processing these catalogs to estimate photometric
-redshifts. Key features include:
+redshifts using rail/LePhare. Key features include:
 
 * Processing Roman catalog data in ASDF format
 * Creating filter definitions based on Roman Space Telescope specifications
