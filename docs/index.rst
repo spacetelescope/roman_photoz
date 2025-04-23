@@ -16,7 +16,7 @@ redshifts using rail/LePhare. Key features include:
 * Processing Roman catalog data in ASDF format
 * Creating filter definitions based on Roman Space Telescope specifications
 * Generating simulated catalogs for development and testing
-* Estimating photometric redshifts using LePhare
+* Estimating photometric redshifts using rail/LePhare
 
 .. toctree::
    :maxdepth: 2
