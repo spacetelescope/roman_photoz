@@ -1,0 +1,33 @@
+name: Run Tests and Post Results
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    uses: OpenAstronomy/github-actions-workflows/.github/workflows/tox.yml@v1
+    with:
+      toxdeps: tox-conda
+      pytest: true
+      pytest-results-summary: true
+      coverage: codecov
+      envs: |
+        - name: Test with coverage
+          os: ubuntu-latest
+          python: 3.9
+          toxenv: test-cov
+          pytest_command: 'pytest --cov=roman_photoz --cov-report=xml'
+        
+        - name: Test with Python 3.10
+          os: ubuntu-latest
+          python: '3.10'
+          toxenv: test
+        
+        - name: Test with Python 3.11
+          os: ubuntu-latest
+          python: '3.11'
+          toxenv: test
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
