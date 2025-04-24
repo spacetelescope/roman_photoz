@@ -1,0 +1,18 @@
+coverage:
+  precision: 2
+  round: down
+  range: "70...100"
+
+comment:
+  layout: "reach, diff, flags, files"
+  behavior: default
+
+fixes:
+  - "*/tests/*"
+
+ignore:
+  - "htmlcov/*"
+
+paths:
+  - "coverage.xml"
+  - "htmlcov/index.html"
