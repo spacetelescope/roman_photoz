@@ -14,17 +14,8 @@ jobs:
       pytest-results-summary: true
       coverage: codecov
       envs: |
-        - name: Test with coverage
-          os: ubuntu-latest
-          python: 3.9
-          toxenv: test-cov
-        - name: Test with Python 3.10
-          os: ubuntu-latest
-          python: 3.10
-          toxenv: test
-        - name: Test with Python 3.11
-          os: ubuntu-latest
-          python: 3.11
-          toxenv: test
+        - linux: py312-cov
+          coverage: codecov
+          pytest-results-summary: true
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
