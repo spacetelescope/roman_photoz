@@ -35,7 +35,7 @@ jobs:
         run: pytest --cov=. --cov-report=xml:coverage.xml
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@main
+        uses: codecov/codecov-action@v5
         with:
           directory: ./
           fail_ci_if_error: true
