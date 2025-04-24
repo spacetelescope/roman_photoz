@@ -14,15 +14,18 @@ jobs:
     with:
       envs: |
         - name: Test with coverage
+          os: ubuntu-latest
           python: 3.9
           toxenv: test-cov
           pytest_command: 'pytest --cov=roman_photoz --cov-report=xml:coverage.xml'
         
         - name: Test with Python 3.10
+          os: ubuntu-latest
           python: '3.10'
           toxenv: test
         
         - name: Test with Python 3.11
+          os: ubuntu-latest
           python: '3.11'
           toxenv: test
     
