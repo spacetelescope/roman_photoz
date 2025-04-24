@@ -1,0 +1,110 @@
+name: Run Tests and Post Results
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    name: ${{ matrix.python-version }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        python-version: ['3.9', '3.10', '3.11']
+        include:
+          - python-version: '3.9'
+            with-coverage: true
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install tox tox-gh-actions pytest pytest-cov
+
+      - name: Run tests with coverage
+        if: ${{ matrix.with-coverage }}
+        run: |
+          python -m pytest --cov=roman_photoz --cov-report=xml:coverage.xml --cov-report=term > pytest-results.txt
+
+      - name: Run tests without coverage
+        if: ${{ !matrix.with-coverage }}
+        run: |
+          python -m pytest > pytest-results.txt
+
+      - name: Upload coverage to Codecov
+        if: ${{ matrix.with-coverage }}
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results-${{ matrix.python-version }}
+          path: pytest-results.txt
+
+  post-results:
+    name: Post Test Results to PR
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Download test results artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: test-results
+        
+      - name: Combine test results
+        run: |
+          mkdir -p combined
+          cat test-results/test-results-3.9/pytest-results.txt > combined/combined-results.txt
+          echo "\n\nPython 3.10 Results:" >> combined/combined-results.txt
+          cat test-results/test-results-3.10/pytest-results.txt >> combined/combined-results.txt
+          echo "\n\nPython 3.11 Results:" >> combined/combined-results.txt
+          cat test-results/test-results-3.11/pytest-results.txt >> combined/combined-results.txt
+          
+      - name: Truncate test results if needed
+        run: |
+          # Limit to about 64KB to stay under GitHub comment size limits
+          head -c 64000 combined/combined-results.txt > combined/truncated-results.txt
+          
+      - name: Post test results as PR comment
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const testResults = fs.readFileSync('combined/truncated-results.txt', 'utf8');
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## Test Results Summary
+            
+            <details>
+            <summary>Click to expand test results</summary>
+            
+            \`\`\`
+            ${testResults}
+            \`\`\`
+            </details>
+            
+            [View full details in the workflow run](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`
+            });
