@@ -296,18 +296,7 @@ class RomanCatalogProcess:
             self.save_results(output_filename=output_filename, output_path=output_path)
 
 
-def main(argv=None):
-    """
-    Main function to process Roman catalog data.
-
-    Parameters
-    ----------
-    argv : list, optional
-        List of command-line arguments.
-    """
-    if argv is None:
-        # skip the first argument (script name)
-        argv = sys.argv[1:]
+def main():
 
     parser = argparse.ArgumentParser(description="Process Roman catalog data.")
     parser.add_argument(
@@ -348,7 +337,7 @@ def main(argv=None):
         help="Save results? (default: True).",
     )
 
-    args = parser.parse_args(argv)
+    args = parser.parse_args()
 
     rcp = RomanCatalogProcess(config_filename=args.config_filename)
 
