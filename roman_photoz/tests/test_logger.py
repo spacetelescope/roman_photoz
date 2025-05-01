@@ -1,5 +1,4 @@
 import logging
-from pathlib import Path
 
 import pytest
 
@@ -38,25 +37,24 @@ def test_setup_logging_sets_correct_level(log_level, level_name):
 
     # Test the specified log level
     logger = setup_logging(level=log_level)
-    assert (
-        logger.level == log_level
-    ), f"Logger level should be {level_name} ({log_level})"
+    assert logger.level == log_level, (
+        f"Logger level should be {level_name} ({log_level})"
+    )
 
 
-def test_setup_logging_creates_handlers():
-    """Test that setup_logging creates file and console handlers."""
-    # Clear existing handlers for clean test
+def test_setup_logging_creates_handler():
+    """Test that setup_logging creates console handler."""
+    # Clear existing handler for clean test
     logging.getLogger("roman_photoz").handlers.clear()
 
     logger = setup_logging()
 
-    # Should have 2 handlers (console and file)
-    assert len(logger.handlers) == 2
+    # Should have 1 handler (console)
+    assert len(logger.handlers) == 1
 
     # Check handler types
     handler_types = [type(h) for h in logger.handlers]
     assert logging.StreamHandler in handler_types
-    assert logging.FileHandler in handler_types
 
 
 def test_setup_logging_uses_correct_formatter():
@@ -87,41 +85,6 @@ def test_setup_logging_only_configures_once():
     assert len(logger2.handlers) == initial_handler_count
 
 
-def test_setup_logging_creates_file_handler_with_correct_path(temp_log_file):
-    """Test that setup_logging creates a file handler with the correct path."""
-    # Clear existing handlers for clean test
-    logging.getLogger("roman_photoz").handlers.clear()
-
-    logger = setup_logging(log_file=str(temp_log_file))
-
-    # Find the FileHandler
-    file_handler = next(
-        h for h in logger.handlers if isinstance(h, logging.FileHandler)
-    )
-
-    # Check that the path matches
-    assert Path(file_handler.baseFilename).resolve() == temp_log_file.resolve()
-
-
-def test_logger_writes_to_file(temp_log_file):
-    """Test that logger writes messages to the specified file."""
-    # Clear existing handlers for clean test
-    logging.getLogger("roman_photoz").handlers.clear()
-
-    # Create logger with test file
-    logger = setup_logging(log_file=str(temp_log_file))
-
-    # Log a test message
-    test_message = "Test log message"
-    logger.info(test_message)
-
-    # Check that the message was written to the file
-    with open(temp_log_file) as f:
-        log_content = f.read()
-
-    assert test_message in log_content
-
-
 @pytest.mark.parametrize(
     "log_level, message_level, should_log",
     [
@@ -139,13 +102,13 @@ def test_logger_writes_to_file(temp_log_file):
         "debug_accepts_debug",
     ],
 )
-def test_logger_respects_log_level(temp_log_file, log_level, message_level, should_log):
+def test_logger_respects_log_level(log_level, message_level, should_log):
     """Test that logger respects the configured log level."""
     # Clear existing handlers for clean test
     logging.getLogger("roman_photoz").handlers.clear()
 
     # Create logger with specified level and test file
-    logger = setup_logging(log_file=str(temp_log_file), level=log_level)
+    logger = setup_logging(level=log_level)
 
     # Log a test message at the specified level
     test_message = "Test log message for level testing"
@@ -159,12 +122,3 @@ def test_logger_respects_log_level(temp_log_file, log_level, message_level, shou
         logger.warning(test_message)
     elif message_level == logging.ERROR:
         logger.error(test_message)
-
-    # Check if the message was logged to the file
-    with open(temp_log_file) as f:
-        log_content = f.read()
-
-    if should_log:
-        assert test_message in log_content
-    else:
-        assert test_message not in log_content

@@ -1,7 +1,7 @@
 import logging
 
 
-def setup_logging(log_file="roman_photoz.log", level=logging.INFO):
+def setup_logging(level=logging.INFO):
     """Set up logging configuration for roman_photoz module"""
     # Create a logger specific to our module instead of configuring the root logger
     logger = logging.getLogger("roman_photoz")
@@ -19,16 +19,12 @@ def setup_logging(log_file="roman_photoz.log", level=logging.INFO):
             "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
         )
 
-        # Create handlers
+        # Create handler
         console_handler = logging.StreamHandler()
         console_handler.setFormatter(formatter)
 
-        file_handler = logging.FileHandler(log_file, mode="a")
-        file_handler.setFormatter(formatter)
-
-        # Add handlers to logger
+        # Add handler to logger
         logger.addHandler(console_handler)
-        logger.addHandler(file_handler)
 
     return logger
 
