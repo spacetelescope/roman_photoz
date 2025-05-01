@@ -16,6 +16,7 @@ from rail.core.stage import RailStage
 from rail.estimation.algos.lephare import LephareEstimator, LephareInformer
 
 from roman_photoz.default_config_file import default_roman_config
+from roman_photoz.logger import logger
 from roman_photoz.roman_catalog_handler import RomanCatalogHandler
 
 DS = RailStage.data_store
@@ -135,6 +136,7 @@ class RomanCatalogProcess:
         """
         # full qualified path to the catalog file
         filename = Path(input_path, input_filename).as_posix()
+        logger.info(f"Reading catalog from {filename}")
 
         # read in catalog data
         if Path(filename).suffix == ".asdf":
@@ -158,7 +160,7 @@ class RomanCatalogProcess:
         """
         # get information about Roman filters
         bands = self.config["FILTER_LIST"].split(",")
-        print(f"Processing {len(bands)} bands")
+        logger.debug(f"Found {len(bands)} bands in filter list")
 
         # loop over the filters we want to keep to get
         # the number of the filter, n, and the name, b
@@ -175,6 +177,7 @@ class RomanCatalogProcess:
         self.data["string_data"] = np.array(cat_data[cat_data.colnames[-1]]).astype(
             bytes
         )
+        logger.info("Catalog data formatted successfully")
 
     def create_informer_stage(self):
         """
@@ -269,14 +272,14 @@ class RomanCatalogProcess:
         if self.estimated is not None:
             ancil_data = self.estimated.data.ancil
         else:
-            print("Error: No results to save.")
+            logger.error("No results to save")
             raise ValueError("No results to save.")
 
         tree = {"roman_photoz_results": ancil_data}
         with AsdfFile(tree) as af:
             af.write_to(output_filename)
 
-        print(f"Results saved to {output_filename}")
+        logger.info(f"Results saved to {output_filename}")
 
     def process(
         self,
@@ -401,7 +404,6 @@ def main(argv=None):
     argv : list, optional
         List of command-line arguments.
     """
-    print("Starting Roman catalog processing...")
     if argv is None:
         # skip the first argument (script name)
         argv = sys.argv[1:]
@@ -410,6 +412,7 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     try:
+        logger.info("Starting Roman catalog processing")
         rcp = RomanCatalogProcess(
             config_filename=args.config_filename, model_filename=args.model_filename
         )
@@ -420,7 +423,7 @@ def main(argv=None):
             output_path=args.output_path,
             save_results=args.save_results,
         )
-        print("Processing completed successfully.")
+        logger.info("Roman catalog processing completed")
     except Exception as e:
-        print(f"An error occurred during processing: {str(e)}")
+        logger.error(f"An error occurred during processing: {str(e)}")
         sys.exit(1)
