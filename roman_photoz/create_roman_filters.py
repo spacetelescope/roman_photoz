@@ -7,6 +7,8 @@ import requests
 from lephare.data_retrieval import get_auxiliary_data
 from lephare.filter import Filter  # type: ignore
 
+from roman_photoz.logger import logger
+
 # date of the file
 DEFAULT_FILE_DATE = "20210614"
 
@@ -157,7 +159,7 @@ def create_path(filepath: str = "") -> Path:
         # save files to custom path
         path = Path(filepath).resolve()
     # create path if they don't exist
-    print("Creating directory structure...")
+    logger.info("Creating directory structure...")
     path.mkdir(parents=True, exist_ok=True)
     return path
 
@@ -191,24 +193,28 @@ def run(input_filename: str = "", input_path: str = ""):
     input_path : str
         The path where the results will be saved.
     """
+    logger.info("Starting filter file creation...")
     # create dataframe from file
     data = read_effarea_file(filename=input_filename, header=1)
 
     # get auxiliary data
+    logger.info("Getting auxiliary data...")
     get_auxiliary_data()
 
     # format and create the file for each filter
     # containing lambda vs transmission
+    logger.info("Creating individual filter files...")
     create_files(data=data, filepath=input_path)
 
     # run filter command to create the filter
     # file containing lambda vs transmission for all filters
     # (merge all the filter files created in the previous call)
+    logger.info("Running filter command to merge filter files...")
     run_filter_command(config_file_path=input_path)
+    logger.info("Filter file creation completed successfully")
 
 
 if __name__ == "__main__":
-
     # this module takes a filename as input containing
     # the monochromatic effective area of each filter per column
     # and creates one file for each filter as well as
@@ -221,4 +227,4 @@ if __name__ == "__main__":
 
     run(input_filename=input_filename, input_path=input_path)
 
-    print("Done.")
+    logger.info("Done.")
