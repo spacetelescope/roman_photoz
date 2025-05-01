@@ -16,8 +16,8 @@ from rail.core.stage import RailStage
 from rail.estimation.algos.lephare import LephareEstimator, LephareInformer
 
 from roman_photoz.default_config_file import default_roman_config
-from roman_photoz.roman_catalog_handler import RomanCatalogHandler
 from roman_photoz.logger import logger
+from roman_photoz.roman_catalog_handler import RomanCatalogHandler
 
 DS = RailStage.data_store
 DS.__class__.allow_overwrite = True

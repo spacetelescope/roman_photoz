@@ -33,7 +33,7 @@ class RomanCatalogHandler:
         self.cat_temp_filename = "cat_temp_file.csv"
         # get Roman's filter names from default config file
         filter_list = default_roman_config.get("FILTER_LIST")
-        if (filter_list is not None):
+        if filter_list is not None:
             self.filter_names = (
                 filter_list.replace(".pb", "").replace("roman/", "").split(",")
             )

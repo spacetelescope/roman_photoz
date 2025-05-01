@@ -19,7 +19,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.x'
+          python-version: "3.x"
 
       - name: Install system dependencies
         run: |
@@ -29,19 +29,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install ".[dev]" pytest-cov
-      
-      - name: Run unit tests with coverage
-        run: pytest --cov=. --cov-report=xml:coverage.xml
-      
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
-        with:
-          directory: ./
-          env_vars: OS,PYTHON
-          fail_ci_if_error: true
-          files: ./coverage.xml
-          flags: unittests
-          name: codecov-umbrella
-          token: ${{ secrets.CODECOV_TOKEN }}
-          verbose: true
+          pip install ".[dev]"
+
+      - name: Run unit tests
+        run: pytest --cov=.
