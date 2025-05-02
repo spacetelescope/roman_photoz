@@ -135,3 +135,15 @@ omit = [
     "*/tests/*",
     "*/docs/*",
 ]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+precision = 2
+fail_under = 70
+
+[tool.coverage.html]
+directory = "htmlcov"
+
+[tool.coverage.xml]
+output = "coverage.xml"
