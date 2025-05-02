@@ -131,6 +131,7 @@ archs = ["x86_64", "arm64"]
 archs = ["auto", "aarch64"]
 
 [tool.coverage.run]
+source = ["roman_photoz"]
 omit = [
     "*/tests/*",
     "*/docs/*",
