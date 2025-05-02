@@ -106,7 +106,6 @@ def test_read_effarea_file(file_exists, test_file, expected_kwargs, expected_dow
                 ) as mock_download,
                 patch("pandas.read_excel", return_value=mock_df) as mock_read_excel,
             ):
-
                 # Create a resolved path for testing
                 test_path = Path(test_file).resolve()
                 result = read_effarea_file(test_path.as_posix())
@@ -133,7 +132,6 @@ def test_create_files(sample_dataframe):
             "roman_photoz.create_roman_filters.create_roman_phot_par_file"
         ) as mock_create_par,
     ):
-
         create_files(sample_dataframe, "test_path")
 
         # Verify create_path was called with the correct path
@@ -201,7 +199,6 @@ def test_create_path(input_path, env_vars, expected_path):
         patch("pathlib.Path.resolve", return_value=expected_path),
         patch("pathlib.Path.mkdir") as mock_mkdir,
     ):
-
         # Call the function with or without input path
         path = create_path(input_path) if input_path is not None else create_path()
 
@@ -221,7 +218,6 @@ def test_run_filter_command():
         ) as mock_create_path,
         patch("roman_photoz.create_roman_filters.Filter") as mock_filter,
     ):
-
         # Configure the mock Filter instance
         mock_filter_instance = MagicMock()
         mock_filter.return_value = mock_filter_instance
@@ -248,7 +244,6 @@ def test_run():
             "roman_photoz.create_roman_filters.run_filter_command"
         ) as mock_run_filter,
     ):
-
         # Configure mock read_effarea_file to return a dataframe
         mock_df = pd.DataFrame({"wavelength": [1, 2, 3]})
         mock_read.return_value = mock_df
