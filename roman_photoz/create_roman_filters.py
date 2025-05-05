@@ -92,7 +92,7 @@ def create_files(data: pd.DataFrame, filepath: str = "") -> None:
     for col in data.columns[1:]:
         output_data = data[[wave, col]]
         # convert wavelength from um to A
-        output_data[wave] = output_data[wave] * 1e4
+        output_data.loc[:, wave] = output_data[wave] * 1e4
         filename = "roman" + "_".join(col.split(" ")).strip() + ".pb"
         first_line = f"# {col} (Roman filter info obtained from {BASE_URL.format(DEFAULT_FILE_DATE)})"
         fq_path = path / filename

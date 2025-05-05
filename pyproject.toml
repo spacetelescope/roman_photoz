@@ -59,6 +59,7 @@ test = [
     "pytest-astropy >= 0.11.0",
     "deepdiff",
     "stpreview>=0.5.1",
+    "pytest-cov",
 ]
 dev = ["roman_photoz[docs,test]", "tox > 4", "pre-commit > 3"]
 sdp = ["stpreview>=0.5.1"]
@@ -128,3 +129,22 @@ archs = ["x86_64", "arm64"]
 
 [tool.cibuildwheel.linux]
 archs = ["auto", "aarch64"]
+
+[tool.coverage.run]
+source = ["roman_photoz"]
+omit = [
+    "*/tests/*",
+    "*/docs/*",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+precision = 2
+fail_under = 70
+
+[tool.coverage.html]
+directory = "htmlcov"
+
+[tool.coverage.xml]
+output = "coverage.xml"
