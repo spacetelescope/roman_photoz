@@ -9,3 +9,4 @@ pyrightconfig.json
 
 # Python package build artifacts
 roman_photoz.egg-info/
+.tox/

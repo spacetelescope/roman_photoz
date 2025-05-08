@@ -346,7 +346,9 @@ class RomanCatalogProcess:
         str
             The path to the informer model file.
         """
-        informer_path = os.environ.get("INFORMER_MODEL_PATH", os.environ.get("LEPHAREWORK", ""))
+        informer_path = os.environ.get(
+            "INFORMER_MODEL_PATH", os.environ.get("LEPHAREWORK", "")
+        )
         return Path(informer_path, self.model_filename).as_posix()
 
 
