@@ -10,6 +10,7 @@ import numpy as np
 from numpy.lib import recfunctions as rfn
 from rail.core.stage import RailStage
 from roman_datamodels import datamodels as rdm
+from astropy.table import Table
 
 from roman_photoz import create_roman_filters
 from roman_photoz.default_config_file import default_roman_config
@@ -25,7 +26,7 @@ LEPHAREWORK = os.environ.get(
     "LEPHAREWORK", (Path(LEPHAREDIR).parent / "work").as_posix()
 )
 CWD = os.getcwd()
-DEFAULT_OUTPUT_CATALOG_FILENAME = "roman_simulated_catalog.asdf"
+DEFAULT_OUTPUT_CATALOG_FILENAME = "roman_simulated_catalog.parquet"
 
 
 class SimulatedCatalog:
@@ -73,10 +74,10 @@ class SimulatedCatalog:
         self.roman_catalog_template = self.read_roman_template_catalog()
 
     def read_roman_template_catalog(self):
-        input_filename = "roman_catalog_template.asdf"
+        input_filename = "r00001_p_v01001001001001_270p65x49y70_f158_mbcat_cat.parquet"
         this_path = Path(__file__).resolve().parent
         input_path = (this_path / "data" / input_filename).as_posix()
-        return rdm.open(input_path)
+        return Table.read(input_path)
 
     def is_folder_not_empty(self, folder_path: str, partial_text: str) -> bool:
         """
@@ -166,6 +167,10 @@ class SimulatedCatalog:
     ):
         """
         Create a simulated input catalog from the simulated data.
+          1 - read the ROMAN_SIMULATED_MAGS.dat produced by LePhare's
+            `prepare` method in `create_simulated_input_catalog`. The
+            columns name are defined by LePhare.
+          2 - format the columns name to match Roman catalog's specifications
         """
         catalog_name = Path(
             LEPHAREWORK, "lib_mag", f"{self.simulated_data_filename}.dat"
@@ -184,7 +189,7 @@ class SimulatedCatalog:
         ]
 
         # we're matching the number of objects in the template
-        num_lines = len(self.roman_catalog_template.source_catalog)
+        num_lines = len(self.roman_catalog_template)
         random_lines = self.pick_random_lines(num_lines)
         catalog = random_lines[cols_to_keep]
 
@@ -227,67 +232,77 @@ class SimulatedCatalog:
         """
         filter_list = (
             default_roman_config["FILTER_LIST"]
+            .lower()
             .replace("roman/roman_", "")
             .replace(".pb", "")
             .split(",")
         )
-        # in the asdf template file we only have the flux in
+        # TODO: in the template file we only have the flux in
         # the F158 filter so we're adding the other filters
+        # get a list of all the column names (parameters) in the template catalog
+        # and remove the filter name since it is a monochromatic catalog (only F158)
         roman_filter_params = [
-            x.replace("F158", "")
-            for x in self.roman_catalog_template.source_catalog.columns
-            if "F158" in x
+            x.lower().replace("f158", "")
+            for x in self.roman_catalog_template.dtype.names
+            if "f158" in x.lower()
         ]
 
         # # first, clear the template
         # self.roman_catalog_template.source_catalog.remove_rows(slice(None))
-        self.roman_catalog_template.source_catalog.add_column(catalog["id"], name="id")
-
+        # self.roman_catalog_template.source_catalog.add_column(
+        #     catalog["label"], name="label"
+        # )
         # then add the simulated data
         for filter_name in filter_list:
             for param in roman_filter_params:
-                new_column = f"{filter_name}{param}"
-                if new_column not in self.roman_catalog_template.source_catalog.columns:
-                    # add new column
-                    if "flux" in new_column:
+                # the new column name has to match the on in the template catalog,
+                # so we need to put the filter name back in the parameter
+                col_name = (
+                    f"{param}{filter_name}"
+                    if "__" not in param
+                    else f"_{filter_name}_".join(param.split("__"))
+                )
+                if col_name not in self.roman_catalog_template.dtype.names:
+                    # add new column (data for a missing filter)
+                    # N.B.: we only need to add photometric data for the missing filters
+                    # so we skip all the other parameters that are not fluxes
+                    if "flux" in col_name:
                         # add flux and error columns for each filter
+                        # 1 - grab simulated flux or flux error from LePhare
                         simulated_colname = (
-                            f"magnitude_{filter_name}_err"
-                            if "err" in new_column
-                            else f"magnitude_{filter_name}"
+                            f"magnitude_{filter_name.capitalize()}_err"
+                            if "err" in col_name
+                            else f"magnitude_{filter_name.capitalize()}"
                         )
-                        self.roman_catalog_template.source_catalog.add_column(
-                            catalog[simulated_colname], name=new_column
+                        # 2 - add the new column to the template catalog
+                        # (with the data corresponding to the missing filter)
+                        self.roman_catalog_template.add_column(
+                            catalog[simulated_colname], name=col_name
                         )
                     else:
-                        # copy parameter from F158
-                        simulated_colname = new_column
-                        self.roman_catalog_template.source_catalog.add_column(
-                            self.roman_catalog_template.source_catalog[f"F158{param}"],
-                            name=new_column,
+                        # for non-photometric data, just copy parameter from F158
+                        self.roman_catalog_template.add_column(
+                            self.roman_catalog_template[
+                                f"{col_name.replace(filter_name, 'f158')}"
+                            ],
+                            name=col_name,
                         )
 
                 else:
                     # replace column data
-                    if "flux" in new_column:
+                    if "flux" in col_name:
                         simulated_colname = (
-                            f"magnitude_{filter_name}_err"
-                            if "err" in new_column
-                            else f"magnitude_{filter_name}"
+                            f"magnitude_{filter_name.capitalize()}_err"
+                            if "err" in col_name
+                            else f"magnitude_{filter_name.capitalize()}"
                         )
-                        self.roman_catalog_template.source_catalog[new_column] = (
-                            catalog[simulated_colname]
-                        )
+                        self.roman_catalog_template[col_name] = catalog[
+                            simulated_colname
+                        ]
 
-        self.roman_catalog_template.source_catalog.add_column(
-            catalog["context"], name="context"
-        )
-        self.roman_catalog_template.source_catalog.add_column(
-            catalog["zspec"], name="zspec"
-        )
-        self.roman_catalog_template.source_catalog.add_column(
-            catalog["z_true"], name="string_data"
-        )
+        self.roman_catalog_template.add_column(catalog["context"], name="context")
+        self.roman_catalog_template.add_column(catalog["zspec"], name="zspec")
+        self.roman_catalog_template.add_column(catalog["z_true"], name="string_data")
 
     def save_catalog(
         self,
@@ -302,10 +317,8 @@ class SimulatedCatalog:
         output_filename : str, optional
             The filename to save the catalog to.
         """
-        output_path = Path(output_path).as_posix()
-        output_filename = output_filename
-        logger.info(f"Saving catalog to {output_path}/{output_filename}...")
-        self.roman_catalog_template.save(output_filename, dir_path=output_path)
+        logger.info(f"Saving catalog to {Path(output_path)}/{output_filename}...")
+        self.roman_catalog_template.write(Path(output_path, output_filename))
         logger.info("Catalog saved successfully")
 
     def add_ids(self, catalog):
@@ -323,10 +336,12 @@ class SimulatedCatalog:
             The catalog data with an ID column added.
         """
         ids = np.arange(1, len(catalog) + 1)
-        catalog = rfn.append_fields(catalog, "id", ids, usemask=False)
+        catalog = rfn.append_fields(catalog, "label", ids, usemask=False)
 
-        new_dtype = [("id", catalog["id"].dtype)] + [
-            (name, catalog[name].dtype) for name in catalog.dtype.names if name != "id"
+        new_dtype = [("label", catalog["label"].dtype)] + [
+            (name, catalog[name].dtype)
+            for name in catalog.dtype.names
+            if name != "label"
         ]
         new_catalog = np.empty(catalog.shape, dtype=new_dtype)
         for name in new_catalog.dtype.names:
