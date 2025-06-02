@@ -7,10 +7,9 @@ from pathlib import Path
 
 import lephare as lp
 import numpy as np
+from astropy.table import Table
 from numpy.lib import recfunctions as rfn
 from rail.core.stage import RailStage
-from roman_datamodels import datamodels as rdm
-from astropy.table import Table
 
 from roman_photoz import create_roman_filters
 from roman_photoz.default_config_file import default_roman_config

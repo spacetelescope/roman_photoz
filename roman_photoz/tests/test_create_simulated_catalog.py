@@ -39,8 +39,8 @@ def test_is_folder_not_empty(simulated_catalog):
 def test_add_ids(simulated_catalog):
     catalog = np.array([(1.0, 2.0), (3.0, 4.0)], dtype=[("col1", "f8"), ("col2", "f8")])
     updated_catalog = simulated_catalog.add_ids(catalog)
-    assert "id" in updated_catalog.dtype.names
-    assert np.array_equal(updated_catalog["id"], [1, 2])
+    assert "label" in updated_catalog.dtype.names
+    assert np.array_equal(updated_catalog["label"], [1, 2])
 
 
 @pytest.mark.parametrize(
@@ -107,16 +107,16 @@ def test_update_roman_catalog_template(simulated_catalog):
     )
     extra = np.array(
         [(1, 2.0, 3.0, 3.0)],
-        dtype=[("id", "i4"), ("context", "f8"), ("zspec", "f8"), ("z_true", "f8")],
+        dtype=[("label", "i4"), ("context", "f8"), ("zspec", "f8"), ("z_true", "f8")],
     )
 
     # Merge fluxes into the catalog
     catalog = merge_arrays([extra, flux, flux_err], flatten=True)
     simulated_catalog.update_roman_catalog_template(catalog)
-    # check that the LePhare-required columns were added to the roman_catalog_template.source_catalog
+    # check that the LePhare-required columns were added to the roman_catalog_template
     assert all(
-        x in simulated_catalog.roman_catalog_template.source_catalog.colnames
-        for x in ["id", "context", "zspec", "string_data"]
+        x in simulated_catalog.roman_catalog_template.colnames
+        for x in ["label", "context", "zspec", "string_data"]
     )
 
 

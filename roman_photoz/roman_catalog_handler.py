@@ -2,6 +2,8 @@ import os
 from pathlib import Path
 
 import numpy as np
+from astropy.table import Table
+from numpy.lib import recfunctions as rfn
 from roman_datamodels import datamodels as rdm
 
 from roman_photoz.default_config_file import default_roman_config
@@ -35,7 +37,10 @@ class RomanCatalogHandler:
         filter_list = default_roman_config.get("FILTER_LIST")
         if filter_list is not None:
             self.filter_names = (
-                filter_list.replace(".pb", "").replace("roman/", "").split(",")
+                filter_list.replace(".pb", "")
+                .replace("roman/roman_", "")
+                .lower()
+                .split(",")
             )
         else:
             raise ValueError("Filter list not found in default config file.")
@@ -45,41 +50,51 @@ class RomanCatalogHandler:
         Format the catalog by appending necessary fields and columns.
         """
         logger.info("Formatting catalog...")
-        # self.format_colnames()
 
-        self.catalog = self.cat_array[["id"]].copy()
+        self.catalog = np.empty(0, dtype=[])
+        self.catalog = rfn.append_fields(self.catalog, "label", self.cat_array["label"])
 
-        for filter_name in self.filter_names:
-            self.catalog = np.lib.recfunctions.append_fields(
-                self.catalog,
-                f"flux_psf_{filter_name}",
-                self.cat_array[f"{filter_name.replace('roman_', '')}_flux_psf"],
-            )
-            self.catalog = np.lib.recfunctions.append_fields(
-                self.catalog,
-                f"flux_psf_err_{filter_name}",
-                self.cat_array[f"{filter_name.replace('roman_', '')}_flux_psf_err"],
-            )
+        for filter_id in self.filter_names:
+            # Roman filter ID in format "fNNN"
+            flux_col_name = f"psf_{filter_id}_flux"
+            if flux_col_name in self.cat_array.dtype.names:
+                self.catalog = rfn.append_fields(
+                    self.catalog,
+                    f"psf_{filter_id}_flux",
+                    np.array(self.cat_array[flux_col_name]),
+                )
+                self.catalog = rfn.append_fields(
+                    self.catalog,
+                    f"psf_{filter_id}_flux_err",
+                    np.array(self.cat_array[f"{flux_col_name}_err"]),
+                )
 
         # populate additional required columns
-        self.catalog = np.lib.recfunctions.append_fields(
+        self.catalog = rfn.append_fields(
             self.catalog,
             "context",
-            self.cat_array["context"],
+            self.cat_array["context"]
+            if "context" in self.cat_array.dtype.names
+            else np.zeros(len(self.cat_array), dtype=int),
             usemask=False,
         )
-        self.catalog = np.lib.recfunctions.append_fields(
+        self.catalog = rfn.append_fields(
             self.catalog,
             "zspec",
-            self.cat_array["zspec"],
+            self.cat_array["zspec"]
+            if "zspec" in self.cat_array.dtype.names
+            else np.zeros(len(self.cat_array), dtype=int),
             usemask=False,
         )
-        self.catalog = np.lib.recfunctions.append_fields(
+        self.catalog = rfn.append_fields(
             self.catalog,
             "string_data",
-            self.cat_array["string_data"].astype(str),
+            self.cat_array["string_data"]
+            if "string_data" in self.cat_array.dtype.names
+            else np.full(len(self.cat_array), ""),
             usemask=False,
         )
+
         logger.info("Catalog formatting completed")
 
     def read_catalog(self):
@@ -87,10 +102,13 @@ class RomanCatalogHandler:
         Read the catalog file and convert it to a numpy structured array.
         """
         logger.info(f"Reading catalog {self.cat_name}...")
-        dm = rdm.open(self.cat_name)
-        self.cat_array = (
-            dm.source_catalog.as_array()
-        )  # Convert Table to numpy structured array
+
+        if Path(self.cat_name).suffix == ".asdf":
+            dm = rdm.open(self.cat_name)
+            # Convert Table to numpy structured array
+            self.cat_array = dm.source_catalog.as_array()
+        elif Path(self.cat_name).suffix == ".parquet":
+            self.cat_array = Table.read(self.cat_name)
 
         logger.info("Catalog read successfully")
 
@@ -110,7 +128,6 @@ class RomanCatalogHandler:
 
 
 if __name__ == "__main__":
-
     test_bigdata = os.getenv("TEST_BIGDATA")
     if test_bigdata is None:
         raise ValueError("Environment variable TEST_BIGDATA is not set")
