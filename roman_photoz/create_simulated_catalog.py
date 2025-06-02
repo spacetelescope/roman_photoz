@@ -166,10 +166,13 @@ class SimulatedCatalog:
     ):
         """
         Create a simulated input catalog from the simulated data.
-          1 - read the ROMAN_SIMULATED_MAGS.dat produced by LePhare's
+
+        + read the ROMAN_SIMULATED_MAGS.dat produced by LePhare's
             `prepare` method in `create_simulated_input_catalog`. The
             columns name are defined by LePhare.
-          2 - format the columns name to match Roman catalog's specifications
+
+        + format the columns name to match Roman catalog's specifications
+
         """
         catalog_name = Path(
             LEPHAREWORK, "lib_mag", f"{self.simulated_data_filename}.dat"

@@ -1,7 +1,5 @@
 """Pytest configuration and fixtures for regression tests."""
 
-import getpass
-import json
 import os
 from datetime import datetime
 
@@ -39,14 +37,14 @@ def pytest_addoption(parser):
 
     # Add options for configuring artifactory access
     parser.addini(
-        "inputs_root", 
+        "inputs_root",
         help="artifactory folder for input files",
-        default="roman-pipeline"
+        default="roman-pipeline",
     )
     parser.addini(
-        "results_root", 
+        "results_root",
         help="artifactory folder for result/truth files",
-        default="roman-pipeline-results/regression-tests/runs/"
+        default="roman-pipeline-results/regression-tests/runs/",
     )
 
 
@@ -71,7 +69,7 @@ def artifactory_repos(pytestconfig):
         results_root = results_root[0]
     elif not results_root:
         results_root = "roman-pipeline-results/regression-tests/runs/"
-        
+
     return inputs_root, results_root
 
 
@@ -86,17 +84,17 @@ def _rtdata_fixture_implementation(artifactory_repos, envopt, request):
 @pytest.fixture(scope="function")
 def rtdata(artifactory_repos, envopt, request, tmpdir):
     """Fixture providing the regression test data access object.
-    
+
     This fixture provides an object to help manage test data files, including
     both input files for tests and truth files for comparison.
     """
     # Change to a temporary directory to avoid polluting the local workspace
     old_dir = os.getcwd()
     tmpdir.chdir()
-    
+
     # Get rtdata instance
     yield from _rtdata_fixture_implementation(artifactory_repos, envopt, request)
-    
+
     # Change back to original directory
     os.chdir(old_dir)
 
@@ -107,23 +105,22 @@ def rtdata_module(artifactory_repos, envopt, request, tmpdir_factory):
     module_tmpdir = tmpdir_factory.mktemp("module")
     old_dir = os.getcwd()
     module_tmpdir.chdir()
-    
+
     yield from _rtdata_fixture_implementation(artifactory_repos, envopt, request)
-    
+
     os.chdir(old_dir)
 
 
 def pytest_runtest_setup(item):
     """Skip tests that require bigdata if not explicitly enabled."""
     bigdata_marker = item.get_closest_marker("bigdata")
-    
+
     if bigdata_marker:
         try:
             option = item.config.getoption("--bigdata")
         except ValueError:
             # If the option doesn't exist, treat it as False
             option = False
-        
+
         if not option:
             pytest.skip("need --bigdata option to run")
-

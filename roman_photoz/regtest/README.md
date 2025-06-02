@@ -78,16 +78,16 @@ import pytest
 def test_my_feature(rtdata):
     # Get input data from Artifactory
     rtdata.get_data("test_data/example_input.fits")
-    
+
     # Process the input data using your pipeline
     result = run_my_pipeline(rtdata.input)
     output_file = "processed_output.fits"
     result.write_to(output_file)
     rtdata.output = output_file
-    
+
     # Get truth data for comparison
     rtdata.get_truth("truth/test_data/example_truth.fits")
-    
+
     # Compare output with truth
     assert rtdata.compare_files(rtdata.output, rtdata.truth)
 ```
@@ -96,7 +96,7 @@ def test_my_feature(rtdata):
 
 1. Always use paths relative to the repository root (not including inputs_root/env)
 2. The framework will prepend the repository and environment paths
-3. Files are automatically cached after first retrieval 
+3. Files are automatically cached after first retrieval
 4. Use `rtdata_module` fixture when multiple tests need the same data
 
 ## Running Tests
@@ -178,7 +178,7 @@ Cache Control:
 This implementation is based on romancal's regression test framework but includes several improvements:
 
 1. Enhanced error messages for file comparison
-2. File caching with control functions 
+2. File caching with control functions
 3. Better handling of binary vs text file differences
 4. More robust pytest configuration
 5. Comprehensive documentation and examples
@@ -186,4 +186,3 @@ This implementation is based on romancal's regression test framework but include
 ## Extending
 
 To add support for comparing specific file formats, add methods to the `RegtestData` class.
-

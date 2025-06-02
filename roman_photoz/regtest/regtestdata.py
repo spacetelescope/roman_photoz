@@ -1,22 +1,16 @@
 """Test data management for regression tests using data from artifactory."""
 
-import os
-import os.path as op
-import pprint
+import filecmp
 import hashlib
 import json
-import filecmp
+import os
+import pprint
 import shutil
 from datetime import datetime
-from pathlib import Path
 from difflib import unified_diff
+from pathlib import Path
 
-from ci_watson.artifactory_helpers import (
-    BigdataError,
-    check_url,
-    get_bigdata,
-    get_bigdata_root,
-)
+from ci_watson.artifactory_helpers import BigdataError, get_bigdata, get_bigdata_root
 
 # Define location of default Artifactory API key, for Jenkins use only
 ARTIFACTORY_API_KEY_FILE = "/eng/ssb2/keys/svc_rodata.key"
@@ -68,7 +62,7 @@ class RegtestData:
         self.remote_results_path = remote_results_path
         self.test_name = test_name
         self.traceback = traceback
-        
+
         # Initialize cache if enabled
         if self._cache_enabled:
             self._init_cache()
@@ -152,12 +146,12 @@ class RegtestData:
     @property
     def bigdata_root(self):
         return self._bigdata_root
-        
+
     @property
     def cache_enabled(self):
         """Get the current cache status."""
         return self._cache_enabled
-        
+
     @cache_enabled.setter
     def cache_enabled(self, value):
         """Enable or disable the cache."""
@@ -172,7 +166,7 @@ class RegtestData:
         """Initialize the cache directory and metadata."""
         self._cache_dir.mkdir(parents=True, exist_ok=True)
         self._cache_index_file = self._cache_dir / "cache_index.json"
-        
+
         # Load or create cache index
         if self._cache_index_file.exists():
             try:
@@ -183,7 +177,7 @@ class RegtestData:
                 self._cache_index = {}
         else:
             self._cache_index = {}
-            
+
     def _get_file_hash(self, filepath):
         """Compute SHA256 hash of a file."""
         sha256_hash = hashlib.sha256()
@@ -191,66 +185,66 @@ class RegtestData:
             for byte_block in iter(lambda: f.read(4096), b""):
                 sha256_hash.update(byte_block)
         return sha256_hash.hexdigest()
-    
+
     def _get_cached_file(self, remote_path):
         """Get a file from cache if available and valid."""
         if not self._cache_enabled:
             return None
-            
+
         cache_key = f"{self._inputs_root}/{self._env}/{remote_path}"
         cache_info = self._cache_index.get(cache_key)
-        
+
         if cache_info:
-            cached_file = self._cache_dir / cache_info['cache_path']
+            cached_file = self._cache_dir / cache_info["cache_path"]
             if cached_file.exists():
                 return str(cached_file)
-            
+
             # For backward compatibility with old cache format
             # that used hash prefixes instead of subdirectories
-            if '_' in cache_info['cache_path']:
-                old_style_path = self._cache_dir / cache_info['cache_path']
+            if "_" in cache_info["cache_path"]:
+                old_style_path = self._cache_dir / cache_info["cache_path"]
                 if old_style_path.exists():
                     return str(old_style_path)
-        
+
         return None
-        
+
     def _cache_file(self, local_path, remote_path):
         """Add a file to the cache.
-        
+
         File is stored in a structure that preserves original filename while
         ensuring uniqueness by using hash-based subdirectories.
         """
         if not self._cache_enabled:
             return
-            
+
         cache_key = f"{self._inputs_root}/{self._env}/{remote_path}"
-        
+
         # Create a hash of the full path to use as a subdirectory
         path_hash = hashlib.sha256(cache_key.encode()).hexdigest()[:8]
         cache_subdir = self._cache_dir / path_hash
         cache_subdir.mkdir(exist_ok=True)
-        
+
         # Use original filename within the hash-based subdirectory
         filename = os.path.basename(local_path)
         cached_file = cache_subdir / filename
-        
+
         # Copy file to cache
         shutil.copy2(local_path, cached_file)
-        
+
         # Store relative path from cache_dir
         rel_path = os.path.join(path_hash, filename)
-        
+
         # Update cache index
         self._cache_index[cache_key] = {
-            'cache_path': rel_path,
-            'hash': self._get_file_hash(local_path),
-            'timestamp': str(datetime.now())
+            "cache_path": rel_path,
+            "hash": self._get_file_hash(local_path),
+            "timestamp": str(datetime.now()),
         }
-        
+
         # Save updated index
-        with open(self._cache_index_file, 'w') as f:
+        with open(self._cache_index_file, "w") as f:
             json.dump(self._cache_index, f, indent=2)
-            
+
     def clear_cache(self):
         """Clear the entire cache directory."""
         if self._cache_enabled and self._cache_dir.exists():
@@ -261,18 +255,18 @@ class RegtestData:
                     shutil.rmtree(item)
             # Recreate index
             self._cache_index = {}
-            with open(self._cache_index_file, 'w') as f:
+            with open(self._cache_index_file, "w") as f:
                 json.dump(self._cache_index, f, indent=2)
-                
+
     def cache_info(self):
         """Return information about the cache."""
         if not self._cache_enabled:
             return {"enabled": False}
-            
+
         # Count files and calculate size
         file_count = 0
         total_size = 0
-        
+
         # Recursively walk through cache directory
         for root, dirs, files in os.walk(self._cache_dir):
             root_path = Path(root)
@@ -281,13 +275,13 @@ class RegtestData:
                     file_path = root_path / file
                     file_count += 1
                     total_size += file_path.stat().st_size
-                
+
         return {
             "enabled": True,
             "location": str(self._cache_dir),
             "files": file_count,
             "size_bytes": total_size,
-            "size_mb": total_size / (1024 * 1024)
+            "size_mb": total_size / (1024 * 1024),
         }
 
     # The methods
@@ -295,7 +289,7 @@ class RegtestData:
         """Copy data from Artifactory remote resource to the CWD
 
         Updates self.input and self.input_remote upon completion
-        
+
         Parameters
         ----------
         path : str, optional
@@ -309,13 +303,13 @@ class RegtestData:
             path = self.input_remote
         else:
             self.input_remote = path
-            
+
         if docopy is None:
             docopy = self.docopy
-            
+
         if use_cache is None:
             use_cache = self._cache_enabled
-            
+
         # Get original filename from path
         original_filename = os.path.basename(path)
 
@@ -335,7 +329,7 @@ class RegtestData:
         # If not in cache or cache disabled, get from Artifactory
         self.input = get_bigdata(self._inputs_root, self._env, path, docopy=docopy)
         self.input_remote = os.path.join(self._inputs_root, self._env, path)
-        
+
         # Add to cache if enabled
         if use_cache and docopy:
             self._cache_file(self.input, path)
@@ -346,7 +340,7 @@ class RegtestData:
         """Copy truth data from Artifactory remote resource to the CWD/truth
 
         Updates self.truth and self.truth_remote on completion
-        
+
         Parameters
         ----------
         path : str, optional
@@ -360,19 +354,19 @@ class RegtestData:
             path = self.truth_remote
         else:
             self.truth_remote = path
-            
+
         if docopy is None:
             docopy = self.docopy
-            
+
         if use_cache is None:
             use_cache = self._cache_enabled
-            
+
         # Get original filename from path
         original_filename = os.path.basename(path)
 
         os.makedirs("truth", exist_ok=True)
         os.chdir("truth")
-        
+
         try:
             # Try cache first
             if use_cache:
@@ -391,37 +385,38 @@ class RegtestData:
             # If not in cache or cache disabled, get from Artifactory
             self.truth = get_bigdata(self._inputs_root, self._env, path, docopy=docopy)
             self.truth_remote = os.path.join(self._inputs_root, self._env, path)
-            
+
             # Add to cache if enabled
             if use_cache and docopy:
                 self._cache_file(self.truth, path)
-                
+
         except BigdataError:
             os.chdir("..")
             raise
-            
+
         os.chdir("..")
         return self.truth
+
     def compare_files(self, output_file, truth_file):
         """Compare output file with truth file, providing detailed difference information.
-        
+
         This implementation provides detailed differences between files for both text
         and binary files. For text files, it shows exact line differences using unified diff.
         For binary files, it provides size and basic difference information.
-        
+
         Parameters
         ----------
         output_file : str
             Path to the output file generated by the test
-            
+
         truth_file : str
             Path to the truth file to compare against
-            
+
         Returns
         -------
         bool
             True if files match, False otherwise
-            
+
         Raises
         ------
         FileNotFoundError
@@ -440,58 +435,63 @@ class RegtestData:
 
         # If binary comparison fails, try to generate a readable diff
         try:
-            with open(output_file, 'r') as f1, open(truth_file, 'r') as f2:
+            with open(output_file) as f1, open(truth_file) as f2:
                 output_lines = f1.readlines()
                 truth_lines = f2.readlines()
-                
-            diff = list(unified_diff(
-                truth_lines, 
-                output_lines,
-                fromfile=os.path.basename(truth_file),
-                tofile=os.path.basename(output_file),
-                lineterm=''
-            ))
-            
+
+            diff = list(
+                unified_diff(
+                    truth_lines,
+                    output_lines,
+                    fromfile=os.path.basename(truth_file),
+                    tofile=os.path.basename(output_file),
+                    lineterm="",
+                )
+            )
+
             if diff:
                 # Get file sizes for additional context
                 output_size = os.path.getsize(output_file)
                 truth_size = os.path.getsize(truth_file)
-                
+
                 # Format a detailed error message
-                diff_msg = '\n'.join([
-                    "Text files differ:",
-                    f"Output file: {output_file} ({output_size:,} bytes)",
-                    f"Truth file:  {truth_file} ({truth_size:,} bytes)",
-                    "Line differences:",
-                    *diff[:50]  # Show first 50 lines of diff
-                ])
-                
+                diff_msg = "\n".join(
+                    [
+                        "Text files differ:",
+                        f"Output file: {output_file} ({output_size:,} bytes)",
+                        f"Truth file:  {truth_file} ({truth_size:,} bytes)",
+                        "Line differences:",
+                        *diff[:50],  # Show first 50 lines of diff
+                    ]
+                )
+
                 # If there are more differences, indicate this
                 if len(diff) > 50:
                     diff_msg += f"\n... and {len(diff) - 50} more differences"
-                    
+
                 raise AssertionError(diff_msg)
-                
+
             return True
-            
+
         except UnicodeDecodeError:
             # For binary files, provide size and basic hash information
             output_size = os.path.getsize(output_file)
             truth_size = os.path.getsize(truth_file)
-            
+
             # Get hashes for additional diagnostic info
             output_hash = self._get_file_hash(output_file)
             truth_hash = self._get_file_hash(truth_file)
-            
-            diff_msg = '\n'.join([
-                "Binary files differ:",
-                f"Output file: {output_file}",
-                f"  Size: {output_size:,} bytes",
-                f"  SHA256: {output_hash}",
-                f"Truth file: {truth_file}",
-                f"  Size: {truth_size:,} bytes", 
-                f"  SHA256: {truth_hash}",
-                f"Size difference: {abs(output_size - truth_size):,} bytes"
-            ])
-            raise AssertionError(diff_msg)
 
+            diff_msg = "\n".join(
+                [
+                    "Binary files differ:",
+                    f"Output file: {output_file}",
+                    f"  Size: {output_size:,} bytes",
+                    f"  SHA256: {output_hash}",
+                    f"Truth file: {truth_file}",
+                    f"  Size: {truth_size:,} bytes",
+                    f"  SHA256: {truth_hash}",
+                    f"Size difference: {abs(output_size - truth_size):,} bytes",
+                ]
+            )
+            raise AssertionError(diff_msg)
