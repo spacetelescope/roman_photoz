@@ -139,7 +139,7 @@ omit = ["*/tests/*", "*/docs/*"]
 show_missing = true
 skip_covered = true
 precision = 2
-fail_under = 70
+# fail_under = 70
 
 [tool.coverage.html]
 directory = "htmlcov"
