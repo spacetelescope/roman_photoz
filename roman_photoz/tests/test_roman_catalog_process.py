@@ -83,6 +83,7 @@ class TestRomanCatalogProcess:
         mock_args.input_filename = "test_input.asdf"
         mock_args.output_path = "test_output_path"
         mock_args.output_filename = "test_output.asdf"
+        mock_args.output_format = "parquet"
         mock_args.save_results = True
         mock_parse_args.return_value = mock_args
 
@@ -105,6 +106,7 @@ class TestRomanCatalogProcess:
             input_path=mock_args.input_path,
             output_filename=mock_args.output_filename,
             output_path=mock_args.output_path,
+            output_format=mock_args.output_format,
             save_results=mock_args.save_results,
         )
 

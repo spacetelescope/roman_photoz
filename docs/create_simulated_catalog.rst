@@ -54,4 +54,3 @@ The following example demonstrates how to programmatically create a simulated ca
     )
 
     print(f"Simulated catalog with {len(catalog)} sources created successfully")
-
