@@ -6,13 +6,13 @@ from pathlib import Path
 
 import pytest
 
+# Import the regtest fixtures
+from roman_photoz.regtest.regtestdata import RegtestData
+
 # Add the regtest directory to the path if needed
 regtest_path = Path(__file__).parent.parent / "regtest"
 if str(regtest_path) not in sys.path:
     sys.path.insert(0, str(regtest_path))
-
-# Import the regtest fixtures
-from roman_photoz.regtest.regtestdata import RegtestData
 
 
 # Set up Artifactory environment
