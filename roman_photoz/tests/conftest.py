@@ -1,9 +1,10 @@
 """Pytest configuration for integration tests."""
 
-import sys
 import os
-import pytest
+import sys
 from pathlib import Path
+
+import pytest
 
 # Add the regtest directory to the path if needed
 regtest_path = Path(__file__).parent.parent / "regtest"
@@ -12,6 +13,7 @@ if str(regtest_path) not in sys.path:
 
 # Import the regtest fixtures
 from roman_photoz.regtest.regtestdata import RegtestData
+
 
 # Set up Artifactory environment
 @pytest.fixture(scope="session")
@@ -41,10 +43,10 @@ def rtdata(artifactory_repos, envopt, request, tmpdir):
     # Change to a temporary directory
     old_dir = os.getcwd()
     tmpdir.chdir()
-    
+
     # Get rtdata instance
     yield from _rtdata_fixture_implementation(artifactory_repos, envopt, request)
-    
+
     # Change back to original directory
     os.chdir(old_dir)
 
@@ -55,9 +57,9 @@ def rtdata_module(artifactory_repos, envopt, request, tmpdir_factory):
     module_tmpdir = tmpdir_factory.mktemp("module")
     old_dir = os.getcwd()
     module_tmpdir.chdir()
-    
+
     yield from _rtdata_fixture_implementation(artifactory_repos, envopt, request)
-    
+
     os.chdir(old_dir)
 
 
@@ -91,14 +93,13 @@ def pytest_addoption(parser):
 def pytest_runtest_setup(item):
     """Skip tests that require bigdata if not explicitly enabled."""
     bigdata_marker = item.get_closest_marker("bigdata")
-    
+
     if bigdata_marker:
         try:
             option = item.config.getoption("--bigdata")
         except ValueError:
             # If the option doesn't exist, treat it as False
             option = False
-        
+
         if not option:
             pytest.skip("need --bigdata option to run")
-

@@ -73,25 +73,31 @@ class RomanCatalogHandler:
         self.catalog = rfn.append_fields(
             self.catalog,
             "context",
-            self.cat_array["context"]
-            if "context" in self.cat_array.dtype.names
-            else np.zeros(len(self.cat_array), dtype=int),
+            (
+                self.cat_array["context"]
+                if "context" in self.cat_array.dtype.names
+                else np.zeros(len(self.cat_array), dtype=int)
+            ),
             usemask=False,
         )
         self.catalog = rfn.append_fields(
             self.catalog,
             "zspec",
-            self.cat_array["zspec"]
-            if "zspec" in self.cat_array.dtype.names
-            else np.zeros(len(self.cat_array), dtype=int),
+            (
+                self.cat_array["zspec"]
+                if "zspec" in self.cat_array.dtype.names
+                else np.zeros(len(self.cat_array), dtype=int)
+            ),
             usemask=False,
         )
         self.catalog = rfn.append_fields(
             self.catalog,
             "string_data",
-            self.cat_array["string_data"]
-            if "string_data" in self.cat_array.dtype.names
-            else np.full(len(self.cat_array), ""),
+            (
+                self.cat_array["string_data"]
+                if "string_data" in self.cat_array.dtype.names
+                else np.full(len(self.cat_array), "")
+            ),
             usemask=False,
         )
 

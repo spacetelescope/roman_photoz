@@ -4,62 +4,63 @@ description = "Library for photometric redshift determination using data from th
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [
-    { name = "Roman calibration pipeline developers", email = "help@stsci.edu" },
+  { name = "Roman calibration pipeline developers", email = "help@stsci.edu" },
 ]
 classifiers = [
-    "Intended Audience :: Science/Research",
-    "Topic :: Scientific/Engineering :: Astronomy",
-    "Programming Language :: Python :: 3",
+  "Intended Audience :: Science/Research",
+  "Topic :: Scientific/Engineering :: Astronomy",
+  "Programming Language :: Python :: 3",
 ]
 dependencies = [
-    "asdf >=3.3.0",
-    "asdf-astropy >=0.5.0",
-    "astropy >=5.3.0",
-    "crds >=11.16.16",
-    "gwcs >=0.21.0",
-    "jsonschema >=4.8",
-    "numpy >=1.23",
-    "photutils >=1.13.0",
-    "pyparsing >=2.4.7",
-    "requests >=2.26",
-    "roman_datamodels>=0.22.0",
-    # "roman_datamodels @ git+https://github.com/spacetelescope/roman_datamodels.git",
-    "scipy>=1.7.0",
-    "stcal>=1.10.0",
-    # "stcal @ git+https://github.com/spacetelescope/stcal.git@main",
-    "stpipe >=0.7.0",
-    # "stpipe @ git+https://github.com/spacetelescope/stpipe.git@main",
-    "tweakwcs >=0.8.8",
-    "spherical-geometry >= 1.2.22",
-    "stsci.imagestats >= 1.6.3",
-    "drizzle >= 1.15.0",
-    "webbpsf >= 1.2.1",
-    # "pz-rail-lephare",
-    "pz-rail-lephare @ git+https://git@github.com/mairanteodoro/rail_lephare.git",
-    "lephare == 0.1.13",
+  "asdf >=3.3.0",
+  "asdf-astropy >=0.5.0",
+  "astropy >=5.3.0",
+  "crds >=11.16.16",
+  "gwcs >=0.21.0",
+  "jsonschema >=4.8",
+  "numpy >=1.23",
+  "photutils >=1.13.0",
+  "pyparsing >=2.4.7",
+  "requests >=2.26",
+  "roman_datamodels>=0.22.0",
+  # "roman_datamodels @ git+https://github.com/spacetelescope/roman_datamodels.git",
+  "scipy>=1.7.0",
+  "stcal>=1.10.0",
+  # "stcal @ git+https://github.com/spacetelescope/stcal.git@main",
+  "stpipe >=0.7.0",
+  # "stpipe @ git+https://github.com/spacetelescope/stpipe.git@main",
+  "tweakwcs >=0.8.8",
+  "spherical-geometry >= 1.2.22",
+  "stsci.imagestats >= 1.6.3",
+  "drizzle >= 1.15.0",
+  "webbpsf >= 1.2.1",
+  # "pz-rail-lephare",
+  "pz-rail-lephare @ git+https://git@github.com/mairanteodoro/rail_lephare.git",
+  "lephare == 0.1.13",
+  "pz-rail-base == 1.1.5",
 ]
 license-files = ["LICENSE"]
 dynamic = ["version"]
 
 [project.optional-dependencies]
 docs = [
-    "matplotlib",
-    "sphinx",
-    "sphinx-astropy",
-    "sphinx-automodapi",
-    "sphinx-rtd-theme",
-    "stsci-rtd-theme",
-    "sphinx-autobuild",
-    "tomli; python_version <=\"3.11\"",
-    "sphinx-argparse",
+  "matplotlib",
+  "sphinx",
+  "sphinx-astropy",
+  "sphinx-automodapi",
+  "sphinx-rtd-theme",
+  "stsci-rtd-theme",
+  "sphinx-autobuild",
+  "tomli; python_version <=\"3.11\"",
+  "sphinx-argparse",
 ]
 test = [
-    "ci-watson >=0.5.0",
-    "pytest >8.0.0",
-    "pytest-astropy >= 0.11.0",
-    "deepdiff",
-    "stpreview>=0.5.1",
-    "pytest-cov",
+  "ci-watson >=0.5.0",
+  "pytest >8.0.0",
+  "pytest-astropy >= 0.11.0",
+  "deepdiff",
+  "stpreview>=0.5.1",
+  "pytest-cov",
 ]
 dev = ["roman_photoz[docs,test]", "tox > 4", "pre-commit > 3"]
 sdp = ["stpreview>=0.5.1"]
@@ -83,14 +84,14 @@ zip-safe = false
 [tool.setuptools.package-data]
 # package_data values are glob patterns relative to each specific subpackage.
 "*" = [
-    "**/*.fits",
-    "**/*.txt",
-    "**/*.inc",
-    "**/*.cfg",
-    "**/*.csv",
-    "**/*.yaml",
-    "**/*.json",
-    "**/*.asdf",
+  "**/*.fits",
+  "**/*.txt",
+  "**/*.inc",
+  "**/*.cfg",
+  "**/*.csv",
+  "**/*.yaml",
+  "**/*.json",
+  "**/*.asdf",
 ]
 
 [tool.pytest.ini_options]
@@ -120,7 +121,7 @@ line-length = 88
 [tool.ruff.lint]
 exclude = ["jdocs", ".tox", ".eggs", "build"]
 ignore = [
-    "E741", # ambiguous variable name
+  "E741", # ambiguous variable name
 ]
 extend-select = ["NPY"]
 
@@ -132,10 +133,7 @@ archs = ["auto", "aarch64"]
 
 [tool.coverage.run]
 source = ["roman_photoz"]
-omit = [
-    "*/tests/*",
-    "*/docs/*",
-]
+omit = ["*/tests/*", "*/docs/*"]
 
 [tool.coverage.report]
 show_missing = true
