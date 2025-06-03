@@ -24,7 +24,7 @@ DS.__class__.allow_overwrite = True
 
 LEPHAREDIR = Path(os.environ.get("LEPHAREDIR", lp.LEPHAREDIR))
 LEPHAREWORK = os.environ.get("LEPHAREWORK", (LEPHAREDIR / "work").as_posix())
-INFORMER_MODEL_PATH = os.environ.get("INFORMER_MODEL_PATH", LEPHAREWORK)
+
 # default paths and filenames
 DEFAULT_INPUT_FILENAME = "roman_simulated_catalog.asdf"
 DEFAULT_INPUT_PATH = LEPHAREWORK
