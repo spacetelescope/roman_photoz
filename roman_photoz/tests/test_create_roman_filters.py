@@ -86,7 +86,7 @@ def test_read_effarea_file(file_exists, test_file, expected_kwargs, expected_dow
     """Test reading an efficiency area file, with or without downloading it first."""
     mock_df = pd.DataFrame({"wavelength": [1, 2, 3]})
 
-    with patch("pathlib.Path.exists", return_value=file_exists) as mock_exists:
+    with patch("pathlib.Path.exists", return_value=file_exists):
         # Set up additional mocks based on whether download is expected
         if file_exists:
             # Simple case: file exists, just mock pandas.read_excel
