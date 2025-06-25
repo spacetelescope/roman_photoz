@@ -29,7 +29,7 @@ The following example demonstrates how to use the `RomanCatalogHandler` class to
      reg_test_data = Path(test_bigdata)
 
      # Specify the catalog file
-     test_cat = reg_test_data / "r0000101001001001001_0001_wfi01_cat.asdf"
+     test_cat = reg_test_data / "r0000101001001001001_0001_wfi01_cat.parquet"
 
      # Create an instance of RomanCatalogHandler
      catalog_handler = RomanCatalogHandler(test_cat.as_posix())
