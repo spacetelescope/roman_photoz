@@ -37,9 +37,9 @@ def test_setup_logging_sets_correct_level(log_level, level_name):
 
     # Test the specified log level
     logger = setup_logging(level=log_level)
-    assert logger.level == log_level, (
-        f"Logger level should be {level_name} ({log_level})"
-    )
+    assert (
+        logger.level == log_level
+    ), f"Logger level should be {level_name} ({log_level})"
 
 
 def test_setup_logging_creates_handler():
