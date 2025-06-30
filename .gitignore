@@ -3,3 +3,10 @@
 # Ignore __pycache__ directories
 *.py[cod]
 docs/_build/
+
+# IDE and editor specific configuration files
+pyrightconfig.json
+
+# Python package build artifacts
+roman_photoz.egg-info/
+.tox/

@@ -25,10 +25,9 @@ import sys
 DS = RailStage.data_store
 DS.__class__.allow_overwrite = True
 
-LEPHAREDIR = os.environ.get("LEPHAREDIR", lp.LEPHAREDIR)
-LEPHAREWORK = os.environ.get(
-    "LEPHAREWORK", (Path(LEPHAREDIR).parent / "work").as_posix()
-)
+LEPHAREDIR = Path(os.environ.get("LEPHAREDIR", lp.LEPHAREDIR))
+LEPHAREWORK = os.environ.get("LEPHAREWORK", (LEPHAREDIR / "work").as_posix())
+
 # default paths and filenames
 DEFAULT_INPUT_FILENAME = "roman_simulated_catalog.parquet"
 DEFAULT_INPUT_PATH = LEPHAREWORK
@@ -79,7 +78,6 @@ class RomanCatalogProcess:
         self.set_config_file(config_filename)
         # set model filename
         self.model_filename = model_filename
-        self.informer_model_path = Path(LEPHAREWORK, self.model_filename).as_posix()
         # set attributes used for determining the redshift
         self.flux_cols: list = []
         self.flux_err_cols: list = []
@@ -330,6 +328,24 @@ class RomanCatalogProcess:
             )
             return True
         return False
+
+    @property
+    def informer_model_path(self):
+        """
+        Get the path to the informer model file.
+
+        The path is determined by checking the INFORMER_MODEL_PATH environment variable first,
+        falling back to LEPHAREWORK if not set.
+
+        Returns
+        -------
+        str
+            The path to the informer model file.
+        """
+        informer_path = os.environ.get(
+            "INFORMER_MODEL_PATH", os.environ.get("LEPHAREWORK", "")
+        )
+        return Path(informer_path, self.model_filename).as_posix()
 
 
 def main():

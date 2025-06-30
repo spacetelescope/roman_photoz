@@ -1,3 +1,4 @@
+import os
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -164,3 +165,95 @@ class TestRomanCatalogProcess:
 
         # Verify create_estimator_stage was always called
         mock_create_estimator.assert_called_once()
+
+    @pytest.mark.parametrize(
+        "model_filename, env_settings, expected_dirname",
+        [
+            # Test with default filename and different INFORMER_MODEL_PATH values
+            (
+                "roman_model.pkl",
+                {"INFORMER_MODEL_PATH": "/mock/informer/model/path"},
+                "/mock/informer/model/path",
+            ),
+            (
+                "roman_model.pkl",
+                {"INFORMER_MODEL_PATH": "/another/mock/path"},
+                "/another/mock/path",
+            ),
+            # Test with custom filenames and different INFORMER_MODEL_PATH values
+            (
+                "custom_model.pkl",
+                {"INFORMER_MODEL_PATH": "/mock/informer/model/path"},
+                "/mock/informer/model/path",
+            ),
+            (
+                "special_model.pkl",
+                {"INFORMER_MODEL_PATH": "/another/mock/path"},
+                "/another/mock/path",
+            ),
+            # Test fallback to LEPHAREWORK when INFORMER_MODEL_PATH is not set
+            (
+                "roman_model.pkl",
+                {"LEPHAREWORK": "/lepharework/path"},
+                "/lepharework/path",
+            ),
+            (
+                "custom_model.pkl",
+                {"LEPHAREWORK": "/lepharework/path"},
+                "/lepharework/path",
+            ),
+            # Test default behavior when neither env var is set (empty path)
+            ("roman_model.pkl", {}, ""),
+            ("custom_model.pkl", {}, ""),
+        ],
+    )
+    def test_informer_model_path(
+        self, monkeypatch, model_filename, env_settings, expected_dirname
+    ):
+        """Test that informer_model_path property correctly combines path and filename.
+
+        The test verifies:
+        1. Correct use of INFORMER_MODEL_PATH when set
+        2. Fallback to LEPHAREWORK when INFORMER_MODEL_PATH is not set
+        3. Proper path combination with different model filenames
+        """
+        # Save original environment variables
+        original_env = {}
+        for var in ["INFORMER_MODEL_PATH", "LEPHAREWORK"]:
+            if var in os.environ:
+                original_env[var] = os.environ[var]
+                monkeypatch.delenv(var)
+
+        try:
+            # Set environment variables according to test case
+            for var, value in env_settings.items():
+                monkeypatch.setenv(var, value)
+
+            # Initialize RomanCatalogProcess with the test model filename
+            rcp = RomanCatalogProcess(model_filename=model_filename)
+
+            # Check both components of the path
+            expected_path = os.path.join(expected_dirname, model_filename)
+            assert (
+                rcp.informer_model_path == expected_path
+            ), f"Full path does not match. Expected: {expected_path}"
+
+            # Verify the directory part matches expected_dirname
+            path_dirname = os.path.dirname(rcp.informer_model_path)
+            assert (
+                path_dirname == expected_dirname
+            ), f"Directory part does not match. Expected: {expected_dirname}"
+
+            # Verify the filename part matches model_filename
+            path_basename = os.path.basename(rcp.informer_model_path)
+            assert (
+                path_basename == model_filename
+            ), f"Filename part does not match. Expected: {model_filename}"
+
+        finally:
+            # Restore original environment variables
+            for var in ["INFORMER_MODEL_PATH", "LEPHAREWORK"]:
+                if var in original_env:
+                    monkeypatch.setenv(var, original_env[var])
+                elif var in os.environ:
+                    monkeypatch.delenv(var)
