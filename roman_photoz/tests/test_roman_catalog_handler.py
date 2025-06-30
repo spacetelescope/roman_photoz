@@ -2,12 +2,16 @@ from unittest.mock import patch
 
 import numpy as np
 import pytest
+from astropy.table import Table
+import os
 
 from roman_photoz.roman_catalog_handler import RomanCatalogHandler
 
+TEST_CATALOG_NAME = "test_catalog.parquet"
+
 
 @pytest.fixture
-def mock_catalog_data(roman_catalog_handler):
+def mock_catalog_data(roman_catalog_handler, tmp_path):
     """Create mock catalog data for testing"""
     # Get the actual filter names used by the handler
     filter_names = [
@@ -40,13 +44,13 @@ def mock_catalog_data(roman_catalog_handler):
         data[field_name] = [100.0 + i * 10, 150.0 + i * 10, 200.0 + i * 10]
         data[field_err_name] = [5.0 + i * 0.5, 7.5 + i * 0.5, 10.0 + i * 0.5]
 
-    return data
+    return Table(data)
 
 
 @pytest.fixture
 def roman_catalog_handler():
     """Create a basic RomanCatalogHandler instance for testing"""
-    return RomanCatalogHandler("test_catalog.parquet")
+    return RomanCatalogHandler()
 
 
 class TestRomanCatalogHandler:
@@ -62,9 +66,10 @@ class TestRomanCatalogHandler:
         assert isinstance(handler.filter_names, list)
         assert len(handler.filter_names) > 0
 
-    def test_init_with_catalog(self):
+    def test_init_with_catalog(self, mock_catalog_data, tmp_path):
         """Test initialization with a catalog name"""
-        catalog_name = "test_catalog.parquet"
+        catalog_name = tmp_path / TEST_CATALOG_NAME
+        mock_catalog_data.write(catalog_name, format="parquet")
         handler = RomanCatalogHandler(catalog_name)
         assert handler.cat_name == catalog_name
 
@@ -79,18 +84,15 @@ class TestRomanCatalogHandler:
             ):
                 RomanCatalogHandler()
 
-    @patch("astropy.table.Table.read")
-    def test_read_catalog(self, mock_read, mock_catalog_data):
+    def test_read_catalog(self, mock_catalog_data, tmp_path):
         """Test reading a catalog file"""
         # Setup mock
-        mock_read.return_value = mock_catalog_data
-
-        # Initialize handler - this will read the catalog in __init__
-        handler = RomanCatalogHandler("test_catalog.parquet")
+        catalog_name = tmp_path / TEST_CATALOG_NAME
+        mock_catalog_data.write(catalog_name, format="parquet")
+        handler = RomanCatalogHandler(catalog_name)
 
         # Check that the catalog was read correctly
         # It's called once in init
-        assert mock_read.call_count >= 1
         assert handler.cat_array is not None
         assert len(handler.cat_array) == 3
         assert handler.cat_array["label"][0] == 1
@@ -98,7 +100,7 @@ class TestRomanCatalogHandler:
     def test_format_catalog(self, roman_catalog_handler, mock_catalog_data):
         """Test formatting a catalog"""
         # Setup
-        roman_catalog_handler.cat_array = mock_catalog_data
+        roman_catalog_handler.cat_array = mock_catalog_data.as_array()
 
         # Execute
         roman_catalog_handler.format_catalog()
@@ -138,14 +140,14 @@ class TestRomanCatalogHandler:
         """Test processing a catalog"""
         # Setup - create handler without filename so it doesn't auto-read
         handler = RomanCatalogHandler()
-        handler.cat_name = "test_catalog.parquet"
+        handler.cat_name = TEST_CATALOG_NAME
         handler.cat_array = None  # Force read_catalog to be called
-        handler.catalog = None   # Force format_catalog to be called
-        
+        handler.catalog = None  # Force format_catalog to be called
+
         # Mock return values
         mock_read_catalog.return_value = mock_catalog_data
         mock_format_catalog.return_value = None
-        
+
         # Execute
         result = handler.process()
 
@@ -157,13 +159,11 @@ class TestRomanCatalogHandler:
         assert result is handler.catalog
 
     @patch("astropy.table.Table.read")
-    def test_end_to_end_process(self, mock_read, mock_catalog_data):
+    def test_end_to_end_process(self, mock_catalog_data, tmp_path):
         """Test the entire process flow from read to format"""
-        # Setup mock
-        mock_read.return_value = mock_catalog_data
-
-        # Initialize handler
-        handler = RomanCatalogHandler("test_catalog.parquet")
+        catalog_name = tmp_path / TEST_CATALOG_NAME
+        mock_catalog_data.write(catalog_name, format="parquet")
+        handler = RomanCatalogHandler(catalog_name)
 
         # Process the catalog
         result = handler.process()
