@@ -140,8 +140,12 @@ class RomanCatalogProcess:
         )
 
         # Populate flux_cols and flux_err_cols from the handler's filter names
-        self.flux_cols = [fit_colname.format(filter_id) for filter_id in handler.filter_names]
-        self.flux_err_cols = [fit_err_colname.format(filter_id) for filter_id in handler.filter_names]
+        self.flux_cols = [
+            fit_colname.format(filter_id) for filter_id in handler.filter_names
+        ]
+        self.flux_err_cols = [
+            fit_err_colname.format(filter_id) for filter_id in handler.filter_names
+        ]
 
         # Convert numpy structured array to astropy Table for RAIL compatibility
         return Table(handler.catalog)
@@ -253,10 +257,7 @@ class RomanCatalogProcess:
             tree = {"roman_photoz_results": ancil_data}
             with AsdfFile(tree) as af:
                 af.write_to(output_filename)
-
-        logger.info(
-            f"Results saved to {Path(output_path, output_filename).as_posix()}."
-        )
+        logger.info(f"Results saved to {output_filename}.")
 
     def process(
         self,
@@ -391,7 +392,7 @@ def main():
     parser.add_argument(
         "--output-format",
         type=str,
-        default=DEFAULT_OUTPUT_PATH,
+        default="parquet",
         help='Format in which to save the results. Supported formats are "parquet" (default) and "asdf".',
     )
     parser.add_argument(

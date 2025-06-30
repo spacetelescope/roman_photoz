@@ -172,5 +172,4 @@ if __name__ == "__main__":
     catalog_handler = RomanCatalogHandler(
         catname=test_cat, fit_colname="psf_{}_flux", fit_err_colname="psf_{}_flux_err"
     )
-    breakpoint()
     print("Done.")
