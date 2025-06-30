@@ -14,6 +14,7 @@ from rail.core.stage import RailStage
 from roman_photoz import create_roman_filters
 from roman_photoz.default_config_file import default_roman_config
 from roman_photoz.logger import logger
+from roman_photoz.utils import save_catalog
 
 ROMAN_DEFAULT_CONFIG = default_roman_config
 
@@ -56,7 +57,7 @@ class SimulatedCatalog:
         Placeholder for simulated data.
     """
 
-    def __init__(self):
+    def __init__(self, include_errors: bool = False):
         """
         Initializes the SimulatedCatalog class.
         """
@@ -71,6 +72,7 @@ class SimulatedCatalog:
         self.simulated_data_filename = ""
         self.simulated_data = None
         self.roman_catalog_template = self.read_roman_template_catalog()
+        self.include_errors = include_errors
 
     def read_roman_template_catalog(self):
         input_filename = "r00001_p_v01001001001001_270p65x49y70_f158_mbcat_cat.parquet"
@@ -191,14 +193,14 @@ class SimulatedCatalog:
         ]
 
         # we're matching the number of objects in the template
-        num_lines = len(self.roman_catalog_template)
+        num_lines = -1  # len(self.roman_catalog_template)
         random_lines = self.pick_random_lines(num_lines)
         catalog = random_lines[cols_to_keep]
 
         final_catalog = self.add_error(catalog)
         final_catalog = self.add_ids(final_catalog)
 
-        context = np.full((num_lines), 0)
+        context = np.full((len(catalog)), 0)
         # zspec = np.full((num_lines), np.nan)
         zspec = final_catalog["redshift"]
         string_data = final_catalog["redshift"]
@@ -213,115 +215,14 @@ class SimulatedCatalog:
         # remove the redshift column
         final_catalog = rfn.drop_fields(final_catalog, ["redshift"])
 
-        self.update_roman_catalog_template(final_catalog)
-        # now that self.roman_catalog_template has been updated, we can get rid of
-        # the simulated data and the simulated data filename
-        del final_catalog
+        final_catalog = Table(final_catalog)
 
-        self.save_catalog(
+        save_catalog(
+            final_catalog,
             output_filename=output_filename,
             output_path=output_path,
+            overwrite=True,
         )
-
-    def update_roman_catalog_template(self, catalog):
-        """
-        Update the Roman catalog template with the simulated data.
-
-        Parameters
-        ----------
-        catalog : np.ndarray
-            The catalog data to update the Roman catalog template with.
-        """
-        filter_list = (
-            default_roman_config["FILTER_LIST"]
-            .lower()
-            .replace("roman/roman_", "")
-            .replace(".pb", "")
-            .split(",")
-        )
-        # TODO: in the template file we only have the flux in
-        # the F158 filter so we're adding the other filters
-        # get a list of all the column names (parameters) in the template catalog
-        # and remove the filter name since it is a monochromatic catalog (only F158)
-        roman_filter_params = [
-            x.lower().replace("f158", "")
-            for x in self.roman_catalog_template.dtype.names
-            if "f158" in x.lower()
-        ]
-
-        # # first, clear the template
-        # self.roman_catalog_template.source_catalog.remove_rows(slice(None))
-        # self.roman_catalog_template.source_catalog.add_column(
-        #     catalog["label"], name="label"
-        # )
-        # then add the simulated data
-        for filter_name in filter_list:
-            for param in roman_filter_params:
-                # the new column name has to match the on in the template catalog,
-                # so we need to put the filter name back in the parameter
-                col_name = (
-                    f"{param}{filter_name}"
-                    if "__" not in param
-                    else f"_{filter_name}_".join(param.split("__"))
-                )
-                if col_name not in self.roman_catalog_template.dtype.names:
-                    # add new column (data for a missing filter)
-                    # N.B.: we only need to add photometric data for the missing filters
-                    # so we skip all the other parameters that are not fluxes
-                    if "flux" in col_name:
-                        # add flux and error columns for each filter
-                        # 1 - grab simulated flux or flux error from LePhare
-                        simulated_colname = (
-                            f"magnitude_{filter_name.capitalize()}_err"
-                            if "err" in col_name
-                            else f"magnitude_{filter_name.capitalize()}"
-                        )
-                        # 2 - add the new column to the template catalog
-                        # (with the data corresponding to the missing filter)
-                        self.roman_catalog_template.add_column(
-                            catalog[simulated_colname], name=col_name
-                        )
-                    else:
-                        # for non-photometric data, just copy parameter from F158
-                        self.roman_catalog_template.add_column(
-                            self.roman_catalog_template[
-                                f"{col_name.replace(filter_name, 'f158')}"
-                            ],
-                            name=col_name,
-                        )
-
-                else:
-                    # replace column data
-                    if "flux" in col_name:
-                        simulated_colname = (
-                            f"magnitude_{filter_name.capitalize()}_err"
-                            if "err" in col_name
-                            else f"magnitude_{filter_name.capitalize()}"
-                        )
-                        self.roman_catalog_template[col_name] = catalog[
-                            simulated_colname
-                        ]
-
-        self.roman_catalog_template.add_column(catalog["context"], name="context")
-        self.roman_catalog_template.add_column(catalog["zspec"], name="zspec")
-        self.roman_catalog_template.add_column(catalog["z_true"], name="string_data")
-
-    def save_catalog(
-        self,
-        output_path: str = LEPHAREWORK,
-        output_filename: str = DEFAULT_OUTPUT_CATALOG_FILENAME,
-    ):
-        """
-        Save the simulated input catalog to a file.
-
-        Parameters
-        ----------
-        output_filename : str, optional
-            The filename to save the catalog to.
-        """
-        logger.info(f"Saving catalog to {Path(output_path)}/{output_filename}...")
-        self.roman_catalog_template.write(Path(output_path, output_filename))
-        logger.info("Catalog saved successfully")
 
     def add_ids(self, catalog):
         """
@@ -379,6 +280,10 @@ class SimulatedCatalog:
         np.ndarray
             The catalog data with error columns added.
         """
+        if not self.include_errors:
+            logger.info("Skipping error addition to the simulated catalog.")
+            return catalog
+
         rng = np.random.default_rng(seed=seed)
         new_dtype = []
         for col in catalog.dtype.names:
@@ -399,6 +304,7 @@ class SimulatedCatalog:
                 )
 
         return new_catalog
+
 
     def create_header(self, catalog_name: str):
         """
@@ -453,20 +359,23 @@ class SimulatedCatalog:
         np.ndarray
             An array containing the randomly picked lines.
         """
-        if self.simulated_data is None:
-            raise ValueError(
-                "Data array is not initialized. Please run create_simulated_input_catalog first."
-            )
+        if num_lines > 0:
+            if self.simulated_data is None:
+                raise ValueError(
+                    "Data array is not initialized. Please run create_simulated_input_catalog first."
+                )
 
-        total_lines = len(self.simulated_data)
-        if num_lines > total_lines:
-            raise ValueError(
-                f"Requested {num_lines} lines, but only {total_lines} lines are available."
-            )
+            total_lines = len(self.simulated_data)
+            if num_lines > total_lines:
+                raise ValueError(
+                    f"Requested {num_lines} lines, but only {total_lines} lines are available."
+                )
 
-        rng = np.random.default_rng()
-        random_indices = rng.choice(total_lines, num_lines, replace=False)
-        return self.simulated_data[random_indices]
+            rng = np.random.default_rng()
+            random_indices = rng.choice(total_lines, num_lines, replace=False)
+            return self.simulated_data[random_indices]
+        else:
+            return self.simulated_data
 
     def process(
         self,
@@ -486,31 +395,39 @@ class SimulatedCatalog:
         logger.info("DONE")
 
 
-if __name__ == "__main__":
-
+def main():
     def parse_args():
         parser = argparse.ArgumentParser(
             description="Create a simulated catalog using the Roman telescope data."
         )
         parser.add_argument(
-            "--output_path",
+            "--output-path",
             type=str,
             default=LEPHAREWORK,
             help="Path to save the output catalog.",
         )
         parser.add_argument(
-            "--output_filename",
+            "--output-filename",
             type=str,
             default=DEFAULT_OUTPUT_CATALOG_FILENAME,
             help="Filename for the output catalog.",
+        )
+        parser.add_argument(
+            "--add-error",
+            action="store_true",
+            help="Optionally add error to the simulated catalog.",
         )
         return parser.parse_args()
 
     args = parse_args()
 
     logger.info("Starting simulated catalog creation...")
-    rcp = SimulatedCatalog()
+    rcp = SimulatedCatalog(include_errors=args.add_error)
     rcp.process(args.output_path, args.output_filename)
     logger.info("Simulated catalog creation completed successfully")
 
     logger.info("Done.")
+
+
+if __name__ == "__main__":
+    main()

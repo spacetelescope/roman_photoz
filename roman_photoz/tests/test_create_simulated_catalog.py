@@ -17,7 +17,7 @@ FILTER_LIST = (
 
 @pytest.fixture
 def simulated_catalog():
-    return SimulatedCatalog()
+    return SimulatedCatalog(include_errors=True)
 
 
 def test_is_folder_not_empty(simulated_catalog):
@@ -95,29 +95,6 @@ def test_create_header(simulated_catalog):
     assert all(x not in colnames for x in ["#", "age"])
 
 
-def test_update_roman_catalog_template(simulated_catalog):
-    # Create test data for fluxes and catalog
-    flux = np.array(
-        [(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0)],
-        dtype=[(f"magnitude_{f}", "f8") for f in FILTER_LIST],
-    )
-    flux_err = np.array(
-        [(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0)],
-        dtype=[(f"magnitude_{f}_err", "f8") for f in FILTER_LIST],
-    )
-    extra = np.array(
-        [(1, 2.0, 3.0, 3.0)],
-        dtype=[("label", "i4"), ("context", "f8"), ("zspec", "f8"), ("z_true", "f8")],
-    )
-
-    # Merge fluxes into the catalog
-    catalog = merge_arrays([extra, flux, flux_err], flatten=True)
-    simulated_catalog.update_roman_catalog_template(catalog)
-    # check that the LePhare-required columns were added to the roman_catalog_template
-    assert all(
-        x in simulated_catalog.roman_catalog_template.colnames
-        for x in ["label", "context", "zspec", "string_data"]
-    )
 
 
 def test_process(simulated_catalog):

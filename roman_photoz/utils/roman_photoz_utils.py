@@ -1,6 +1,16 @@
 from pathlib import Path
 
 from roman_photoz.logger import logger
+import os
+import lephare as lp
+from astropy.table import Table
+from roman_photoz.default_config_file import default_roman_config
+
+LEPHAREDIR = os.environ.get("LEPHAREDIR", lp.LEPHAREDIR)
+LEPHAREWORK = os.environ.get(
+    "LEPHAREWORK", (Path(LEPHAREDIR).parent / "work").as_posix()
+)
+DEFAULT_OUTPUT_CATALOG_FILENAME = "roman_simulated_catalog.parquet"
 
 
 def read_output_keys(output_keys_filename: str) -> list[str]:
@@ -35,3 +45,49 @@ def read_output_keys(output_keys_filename: str) -> list[str]:
         ]
 
     return output_keys
+
+
+def save_catalog(
+    catalog: Table = None,
+    output_path: str = LEPHAREWORK,
+    output_filename: str = DEFAULT_OUTPUT_CATALOG_FILENAME,
+    overwrite: bool = False,
+):
+    """
+    Save the given catalog to a file.
+
+    Parameters
+    ----------
+    catalog : astropy.table.Table
+        The catalog to save.
+    output_path : str or Path, optional
+        Directory where the catalog file will be saved. Defaults to LEPHAREWORK if not specified.
+    output_filename : str, optional
+        Name of the output file. Defaults to 'roman_simulated_catalog.parquet' if not specified.
+    """
+    logger.info(f"Saving catalog to {Path(output_path)}/{output_filename}...")
+    catalog.write(
+        Path(output_path, output_filename), overwrite=overwrite, format="parquet"
+    )
+    logger.info("Catalog saved successfully")
+
+
+def get_roman_filter_list() -> list[str]:
+    """
+    Get the filter names from the default Roman configuration in format 'fNNN'.
+
+    Returns
+    -------
+    list of str
+        List of filter names.
+    """
+    filter_list = default_roman_config.get("FILTER_LIST")
+    if filter_list is not None:
+        return (
+            filter_list.replace(".pb", "")
+            .replace("roman/roman_", "")
+            .lower()
+            .split(",")
+        )
+    else:
+        raise ValueError("Filter list not found in default config file.")

@@ -2,7 +2,7 @@
 name = "roman_photoz"
 description = "Library for photometric redshift determination using data from the Nancy Grace Roman Space Telescope"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 authors = [
   { name = "Roman calibration pipeline developers", email = "help@stsci.edu" },
 ]
@@ -22,7 +22,7 @@ dependencies = [
   "photutils >=1.13.0",
   "pyparsing >=2.4.7",
   "requests >=2.26",
-  "roman_datamodels>=0.22.0",
+  "roman_datamodels @ git+https://github.com/spacetelescope/roman_datamodels.git@main",
   # "roman_datamodels @ git+https://github.com/spacetelescope/roman_datamodels.git",
   "scipy>=1.7.0",
   "stcal>=1.10.0",
@@ -38,6 +38,9 @@ dependencies = [
   "pz-rail-lephare @ git+https://git@github.com/mairanteodoro/rail_lephare.git",
   "lephare == 0.1.13",
   "pz-rail-base == 1.1.5",
+  "tox>=4.26.0",
+  "pip>=25.1.1",
+  "jdaviz>=4.2.3",
 ]
 license-files = ["LICENSE"]
 dynamic = ["version"]
@@ -146,3 +149,7 @@ directory = "htmlcov"
 
 [tool.coverage.xml]
 output = "coverage.xml"
+
+[project.scripts]
+roman-photoz = "roman_photoz.__main__:main"
+roman-photoz-create-simulated-catalog = "roman_photoz.create_simulated_catalog:main"

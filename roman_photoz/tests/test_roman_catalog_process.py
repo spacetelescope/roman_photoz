@@ -85,6 +85,8 @@ class TestRomanCatalogProcess:
         mock_args.output_filename = "test_output.asdf"
         mock_args.output_format = "parquet"
         mock_args.save_results = True
+        mock_args.fit_colname = "psf_{}_flux"
+        mock_args.fit_err_colname = "psf_{}_flux_err"
         mock_parse_args.return_value = mock_args
 
         # Setup mock rcp instance
@@ -92,7 +94,7 @@ class TestRomanCatalogProcess:
         mock_rcp_class.return_value = mock_rcp
 
         # Call main
-        main([])
+        main()
 
         # Check that RomanCatalogProcess was initialized with the correct model_filename
         mock_rcp_class.assert_called_once_with(
@@ -108,6 +110,8 @@ class TestRomanCatalogProcess:
             output_path=mock_args.output_path,
             output_format=mock_args.output_format,
             save_results=mock_args.save_results,
+            fit_colname=mock_args.fit_colname,
+            fit_err_colname=mock_args.fit_err_colname,
         )
 
     @pytest.mark.parametrize(

@@ -2,18 +2,32 @@
 
 from pathlib import Path
 
-import pkg_resources
 import pytest
 from astropy.table import Table
+
+try:
+    from importlib.resources import files
+except ImportError:
+    # Fallback for Python < 3.9
+    from importlib_resources import files
 
 from roman_photoz.default_config_file import default_roman_config
 from roman_photoz.roman_catalog_process import RomanCatalogProcess
 from roman_photoz.utils.roman_photoz_utils import read_output_keys
 
 # file containing the default output keys that the output file should have
-DEFAULT_OUTPUT_KEYWORDS = pkg_resources.resource_filename(
-    __name__, "../data/default_roman_output.para"
-)
+try:
+    # Modern approach using importlib.resources
+    DEFAULT_OUTPUT_KEYWORDS = str(
+        files("roman_photoz").joinpath("data/default_roman_output.para")
+    )
+except (ImportError, AttributeError):
+    # Fallback for older Python versions or if importlib_resources not available
+    import pkg_resources
+
+    DEFAULT_OUTPUT_KEYWORDS = pkg_resources.resource_filename(
+        "roman_photoz", "data/default_roman_output.para"
+    )
 
 
 @pytest.fixture
@@ -31,7 +45,7 @@ def test_roman_photoz(rtdata, tmp_path):
     input_filename = "test_simulated_catalog.parquet"
     rtdata.get_data(f"{Path(input_path, input_filename).as_posix()}")
 
-    # # Verify input was retrieved
+    # Verify input was retrieved
     assert rtdata.input is not None
     assert Path(rtdata.input).name == "test_simulated_catalog.parquet"
 

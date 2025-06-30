@@ -18,7 +18,9 @@ from rail.estimation.algos.lephare import LephareEstimator, LephareInformer
 from roman_photoz.default_config_file import default_roman_config
 from roman_photoz.logger import logger
 from roman_photoz.roman_catalog_handler import RomanCatalogHandler
-from roman_photoz.utils.roman_photoz_utils import read_output_keys
+from roman_photoz.utils import read_output_keys
+import argparse
+import sys
 
 DS = RailStage.data_store
 DS.__class__.allow_overwrite = True
@@ -110,6 +112,8 @@ class RomanCatalogProcess:
         self,
         input_filename: str = DEFAULT_INPUT_FILENAME,
         input_path: str = DEFAULT_INPUT_PATH,
+        fit_colname: str = "psf_{}_flux",
+        fit_err_colname: str = "psf_{}_flux_err",
     ) -> Table:
         """
         Fetch the data from the input file.
@@ -133,51 +137,16 @@ class RomanCatalogProcess:
         # read in catalog data
         # if Path(filename).suffix == ".asdf":
         # Roman catalog
-        handler = RomanCatalogHandler(filename)
-        cat_data = Table(handler.process())
-        # else:
-        # cat_data = Table.read(filename)
-
-        return cat_data
-
-    def format_data(self, cat_data: Table):
-        """
-        Format the catalog data.
-
-        Parameters
-        ----------
-        cat_data : Table
-            The catalog data.
-        """
-        # get information about Roman filters
-        bands = self.config["FILTER_LIST"].split(",")
-        logger.debug(f"Found {len(bands)} bands in filter list")
-        # get the filter IDs for which we have data
-        observed_filter_ids = sorted(
-            {x.split("_")[1] for x in cat_data.colnames if "flux" in x}
+        handler = RomanCatalogHandler(
+            filename, fit_colname=fit_colname, fit_err_colname=fit_err_colname
         )
-        # get a list of all the filter IDs
-        all_filter_ids = sorted([x.split("_")[-1].split(".")[0].lower() for x in bands])
 
-        self.data["label"] = cat_data[cat_data.colnames[0]].data.astype(int)
-        # loop over the filters we want to keep to get
-        # the number of the filter, n, and the name, b
-        # (the final data has to have  2 * n_bands + 4 columns)
-        for n, b in enumerate(observed_filter_ids):
-            if b in all_filter_ids:
-                flux = cat_data[cat_data.colnames[1 + 2 * n]].data.astype(float)
-                flux_err = cat_data[cat_data.colnames[2 + 2 * n]].data.astype(float)
-                self.data[f"psf_{b}_flux"] = flux
-                self.flux_cols.append(f"psf_{b}_flux")
-                self.data[f"psf_{b}_flux_err"] = flux_err
-                self.flux_err_cols.append(f"psf_{b}_flux_err")
+        # Populate flux_cols and flux_err_cols from the handler's filter names
+        self.flux_cols = [fit_colname.format(filter_id) for filter_id in handler.filter_names]
+        self.flux_err_cols = [fit_err_colname.format(filter_id) for filter_id in handler.filter_names]
 
-        self.data["context"] = np.array(cat_data[cat_data.colnames[-3]]).astype(int)
-        self.data["redshift"] = np.array(cat_data[cat_data.colnames[-2]]).astype(float)
-        self.data["string_data"] = np.array(cat_data[cat_data.colnames[-1]]).astype(
-            bytes
-        )
-        logger.info("Catalog data formatted successfully")
+        # Convert numpy structured array to astropy Table for RAIL compatibility
+        return Table(handler.catalog)
 
     def create_informer_stage(self):
         """
@@ -299,6 +268,8 @@ class RomanCatalogProcess:
         output_path: str = DEFAULT_OUTPUT_PATH,
         output_format: str = "parquet",
         save_results: bool = True,
+        fit_colname: str = "psf_{}_flux",
+        fit_err_colname: str = "psf_{}_flux_err",
     ):
         """
         Process the Roman catalog data.
@@ -315,13 +286,20 @@ class RomanCatalogProcess:
             Path to the output file.
         output_format : str, optional
             Format to save the results.
-            Supported formats are "parquet" (default) and "asdf".
+            Supported formats are "parquet" (default) and "asdf."
         save_results : bool, optional
             Whether to save the results.
+        flux_type : str, optional
+            The type of flux to use for fitting.
+            Options are "psf" (default), "kron", "segment", or "aperture."
         """
-        cat_data = self.get_data(input_filename=input_filename, input_path=input_path)
+        self.data = self.get_data(
+            input_filename=input_filename,
+            input_path=input_path,
+            fit_colname=fit_colname,
+            fit_err_colname=fit_err_colname,
+        )
 
-        self.format_data(cat_data)
         if not self.informer_model_exists:
             print(
                 "Warning: The informer model file does not exist. Creating a new one..."
@@ -354,86 +332,77 @@ class RomanCatalogProcess:
         return False
 
 
-def _get_parser():
+def main():
     """
-    Create and return the argument parser for the roman_photoz command-line interface.
-
-    This function is used by both the main function and the Sphinx documentation.
-
-    Returns
-    -------
-    argparse.ArgumentParser
-        The configured argument parser
+    Main function to process Roman catalog data using command-line arguments.
+    This function parses command-line arguments for input/output files, configuration,
+    model files, and processing options, then runs the RomanCatalogProcess accordingly.
     """
+
     parser = argparse.ArgumentParser(description="Process Roman catalog data.")
     parser.add_argument(
-        "--config_filename",
+        "--config-filename",
         type=str,
         default="",
         help="Path to the configuration file (default: use default Roman config).",
         required=False,
     )
     parser.add_argument(
-        "--model_filename",
+        "--model-filename",
         type=str,
         default="roman_model.pkl",
         help="Name of the pickle model file (default: roman_model.pkl).",
         required=False,
     )
     parser.add_argument(
-        "--input_path",
+        "--input-path",
         type=str,
         default=DEFAULT_INPUT_PATH,
         help=f"Path to the catalog file (default: {DEFAULT_INPUT_PATH}).",
     )
     parser.add_argument(
-        "--input_filename",
+        "--input-filename",
         type=str,
         default=DEFAULT_INPUT_FILENAME,
         help=f"Input catalog filename (default: {DEFAULT_INPUT_FILENAME}).",
     )
     parser.add_argument(
-        "--output_path",
+        "--output-path",
         type=str,
         default=DEFAULT_OUTPUT_PATH,
         help=f"Path to where the results will be saved (default: {DEFAULT_OUTPUT_PATH}).",
     )
     parser.add_argument(
-        "--output_format",
+        "--output-format",
         type=str,
         default=DEFAULT_OUTPUT_PATH,
         help='Format in which to save the results. Supported formats are "parquet" (default) and "asdf".',
     )
     parser.add_argument(
-        "--output_filename",
+        "--output-filename",
         type=str,
         default=DEFAULT_OUTPUT_FILENAME,
         help=f"Output filename (default: {DEFAULT_OUTPUT_FILENAME}).",
     )
     parser.add_argument(
-        "--save_results",
+        "--save-results",
         type=bool,
         default=True,
         help="Save results? (default: True).",
     )
-    return parser
-
-
-def main(argv=None):
-    """
-    Main function to process Roman catalog data.
-
-    Parameters
-    ----------
-    argv : list, optional
-        List of command-line arguments.
-    """
-    if argv is None:
-        # skip the first argument (script name)
-        argv = sys.argv[1:]
-
-    parser = _get_parser()
-    args = parser.parse_args(argv)
+    parser.add_argument(
+        "--fit-colname",
+        type=str,
+        default="psf_{}_flux",
+        help="Template for the column name to be used for fitting fluxes/mags. It should contain a pair of curly braces as a placeholder for the filter ID, e.g., 'psf_{}_flux'.",
+    )
+    parser.add_argument(
+        "--fit-err-colname",
+        type=str,
+        default="psf_{}_flux_err",
+        help="Template for the column name containing the error corresponding to fit_colname. It should contain a pair of curly braces as a placeholder for the filter ID, e.g., 'psf_{}_flux_err'.",
+    )
+    args = parser.parse_args()
 
     try:
         logger.info("Starting Roman catalog processing")
@@ -447,6 +416,8 @@ def main(argv=None):
             output_path=args.output_path,
             output_format=args.output_format,
             save_results=args.save_results,
+            fit_colname=args.fit_colname,
+            fit_err_colname=args.fit_err_colname,
         )
         logger.info("Roman catalog processing completed")
     except Exception as e:
