@@ -14,7 +14,7 @@ from rail.core.stage import RailStage
 from roman_photoz import create_roman_filters
 from roman_photoz.default_config_file import default_roman_config
 from roman_photoz.logger import logger
-from roman_photoz.utils import save_catalog
+from roman_photoz.utils import save_catalog, get_roman_filter_list
 
 ROMAN_DEFAULT_CONFIG = default_roman_config
 
@@ -68,17 +68,9 @@ class SimulatedCatalog:
         self.flux_err_cols = []
         self.inform_stage = None
         self.estimated = None
-        self.filter_lib = None
         self.simulated_data_filename = ""
         self.simulated_data = None
-        self.roman_catalog_template = self.read_roman_template_catalog()
         self.include_errors = include_errors
-
-    def read_roman_template_catalog(self):
-        input_filename = "r00001_p_v01001001001001_270p65x49y70_f158_mbcat_cat.parquet"
-        this_path = Path(__file__).resolve().parent
-        input_path = (this_path / "data" / input_filename).as_posix()
-        return Table.read(input_path)
 
     def is_folder_not_empty(self, folder_path: str, partial_text: str) -> bool:
         """
@@ -102,13 +94,12 @@ class SimulatedCatalog:
                 return True
         return False
 
-    def get_filters(self):
+    def create_filter_files(self):
         """
-        Retrieve or create filter files for the Roman telescope.
+        Create filter files for the Roman telescope.
 
         This method checks if the required filter files are present in the specified directory.
-        If not, it generates them using the `create_roman_filters` module. It also initializes
-        the filter library using the LePhare configuration.
+        If not, it generates them using the `create_roman_filters` module.
 
         Raises
         ------
@@ -122,9 +113,6 @@ class SimulatedCatalog:
             logger.info("Filter files not found, generating them...")
             create_roman_filters.run()
 
-        self.filter_lib = lp.FilterSvc.from_keymap(
-            lp.all_types_to_keymap(self.lephare_config)
-        )
         logger.info(
             f"Created filter library using the filter files in {self.lephare_config['FILTER_REP']}/roman."
         )
@@ -305,7 +293,6 @@ class SimulatedCatalog:
 
         return new_catalog
 
-
     def create_header(self, catalog_name: str):
         """
         Create the header for the catalog.
@@ -320,12 +307,7 @@ class SimulatedCatalog:
         list
             The list of column names for the catalog.
         """
-        filter_list = (
-            self.lephare_config.get("FILTER_LIST")
-            .replace(".pb", "")
-            .replace("roman/roman_", "")
-            .split(",")
-        )
+        filter_list = get_roman_filter_list()
         with open(catalog_name) as f:
             # BEWARE of the format of LAPHEREWORK/lib_mag/ROMAN_SIMULATED_MAGS.dat!
             # ignore the first N_filt lines in the file
@@ -385,7 +367,7 @@ class SimulatedCatalog:
         """
         Run the process to create the simulated catalog.
         """
-        self.get_filters()
+        self.create_filter_files()
         self.create_simulated_data()
         self.create_simulated_input_catalog(
             output_filename=output_filename,
