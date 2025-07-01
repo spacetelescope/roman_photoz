@@ -30,12 +30,12 @@ default_roman_config = {
     "DZ_WIN": "0.25",
     "EBV_RANGE": "0,9",
     "EB_V": "0.01,0.05,0.1,0.15,0.2,0.25,0.3,0.35,0.4,0.5",
-    "EM_DISPERSION": "",
-    "EM_LINES": "NO",
+    "EM_DISPERSION": "0.5,0.75,1.,1.5,2.",
+    "EM_LINES": "EMP_UV",
     "ERR_FACTOR": "1.0",
     "ERR_SCALE": "0.001,0.001,0.001,0.001,0.001,0.001,0.001,0.001",  # noqa: E501
     "EXTERNALZ_FILE": "NONE",
-    "EXTINC_LAW": "SMC_prevot.dat,SB_calzetti.dat,SB_calzetti_bump1.dat,SB_calzetti_bump2.dat",
+    "EXTINC_LAW": "SB_calzetti.dat",
     "FILTER_CALIB": "0,0,0,0,0,0,0,0",
     "FILTER_FILE": "filter_roman",
     "FILTER_LIST": "roman/roman_F062.pb,roman/roman_F087.pb,roman/roman_F106.pb,roman/roman_F129.pb,roman/roman_F146.pb,roman/roman_F158.pb,roman/roman_F184.pb,roman/roman_F213.pb",  # noqa: E501
@@ -69,7 +69,7 @@ default_roman_config = {
     "MAG_ABS_QSO": "-30,-10",
     "MAG_REF": "3",
     "MIN_THRES": "0.02",
-    "MOD_EXTINC": "1,31,1,31,1,31,1,31",
+    "MOD_EXTINC": "1,31",
     "PARA_OUT": str(Path(__file__).parent / "data" / "default_roman_output.para"),
     "PDZ_OUT": "test",
     "PDZ_TYPE": "BAY_ZG",
@@ -94,5 +94,5 @@ default_roman_config = {
     "Z_INTERP": "YES",
     "Z_METHOD": "BEST",
     "Z_RANGE": "0.01,99.99",
-    "Z_STEP": "0.001,0.001,1.0",
+    "Z_STEP": "0.1,0.,7.0",
 }
