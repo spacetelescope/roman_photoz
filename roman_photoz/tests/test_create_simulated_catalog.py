@@ -6,13 +6,9 @@ from numpy.lib.recfunctions import merge_arrays
 
 from roman_photoz.create_simulated_catalog import SimulatedCatalog
 from roman_photoz.default_config_file import default_roman_config
+from roman_photoz.utils.roman_photoz_utils import get_roman_filter_list
 
-FILTER_LIST = (
-    default_roman_config.get("FILTER_LIST", "")
-    .replace(".pb", "")
-    .replace("roman/roman_", "")
-    .split(",")
-)
+FILTER_LIST = get_roman_filter_list()
 
 
 @pytest.fixture
@@ -95,11 +91,11 @@ def test_create_header(simulated_catalog):
     assert all(x not in colnames for x in ["#", "age"])
 
 
-
-
 def test_process(simulated_catalog):
     with (
-        patch.object(simulated_catalog, "get_filters") as mock_get_filters,
+        patch.object(
+            simulated_catalog, "create_filter_files"
+        ) as mock_create_filter_files,
         patch.object(
             simulated_catalog, "create_simulated_data"
         ) as mock_create_simulated_data,
@@ -110,6 +106,6 @@ def test_process(simulated_catalog):
         simulated_catalog.process(
             output_path="dummy_path", output_filename="dummy_file"
         )
-        mock_get_filters.assert_called_once()
+        mock_create_filter_files.assert_called_once()
         mock_create_simulated_data.assert_called_once()
         mock_create_simulated_input_catalog.assert_called_once()
