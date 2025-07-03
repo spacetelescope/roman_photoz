@@ -6,18 +6,14 @@ from numpy.lib.recfunctions import merge_arrays
 
 from roman_photoz.create_simulated_catalog import SimulatedCatalog
 from roman_photoz.default_config_file import default_roman_config
+from roman_photoz.utils.roman_photoz_utils import get_roman_filter_list
 
-FILTER_LIST = (
-    default_roman_config.get("FILTER_LIST", "")
-    .replace(".pb", "")
-    .replace("roman/roman_", "")
-    .split(",")
-)
+FILTER_LIST = get_roman_filter_list()
 
 
 @pytest.fixture
 def simulated_catalog():
-    return SimulatedCatalog()
+    return SimulatedCatalog(include_errors=True)
 
 
 def test_is_folder_not_empty(simulated_catalog):
@@ -39,8 +35,8 @@ def test_is_folder_not_empty(simulated_catalog):
 def test_add_ids(simulated_catalog):
     catalog = np.array([(1.0, 2.0), (3.0, 4.0)], dtype=[("col1", "f8"), ("col2", "f8")])
     updated_catalog = simulated_catalog.add_ids(catalog)
-    assert "id" in updated_catalog.dtype.names
-    assert np.array_equal(updated_catalog["id"], [1, 2])
+    assert "label" in updated_catalog.dtype.names
+    assert np.array_equal(updated_catalog["label"], [1, 2])
 
 
 @pytest.mark.parametrize(
@@ -95,34 +91,11 @@ def test_create_header(simulated_catalog):
     assert all(x not in colnames for x in ["#", "age"])
 
 
-def test_update_roman_catalog_template(simulated_catalog):
-    # Create test data for fluxes and catalog
-    flux = np.array(
-        [(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0)],
-        dtype=[(f"magnitude_{f}", "f8") for f in FILTER_LIST],
-    )
-    flux_err = np.array(
-        [(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0)],
-        dtype=[(f"magnitude_{f}_err", "f8") for f in FILTER_LIST],
-    )
-    extra = np.array(
-        [(1, 2.0, 3.0, 3.0)],
-        dtype=[("id", "i4"), ("context", "f8"), ("zspec", "f8"), ("z_true", "f8")],
-    )
-
-    # Merge fluxes into the catalog
-    catalog = merge_arrays([extra, flux, flux_err], flatten=True)
-    simulated_catalog.update_roman_catalog_template(catalog)
-    # check that the LePhare-required columns were added to the roman_catalog_template.source_catalog
-    assert all(
-        x in simulated_catalog.roman_catalog_template.source_catalog.colnames
-        for x in ["id", "context", "zspec", "string_data"]
-    )
-
-
 def test_process(simulated_catalog):
     with (
-        patch.object(simulated_catalog, "get_filters") as mock_get_filters,
+        patch.object(
+            simulated_catalog, "create_filter_files"
+        ) as mock_create_filter_files,
         patch.object(
             simulated_catalog, "create_simulated_data"
         ) as mock_create_simulated_data,
@@ -133,6 +106,6 @@ def test_process(simulated_catalog):
         simulated_catalog.process(
             output_path="dummy_path", output_filename="dummy_file"
         )
-        mock_get_filters.assert_called_once()
+        mock_create_filter_files.assert_called_once()
         mock_create_simulated_data.assert_called_once()
         mock_create_simulated_input_catalog.assert_called_once()

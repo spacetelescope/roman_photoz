@@ -18,6 +18,9 @@ from rail.estimation.algos.lephare import LephareEstimator, LephareInformer
 from roman_photoz.default_config_file import default_roman_config
 from roman_photoz.logger import logger
 from roman_photoz.roman_catalog_handler import RomanCatalogHandler
+from roman_photoz.utils import read_output_keys
+import argparse
+import sys
 
 DS = RailStage.data_store
 DS.__class__.allow_overwrite = True
@@ -26,12 +29,13 @@ LEPHAREDIR = Path(os.environ.get("LEPHAREDIR", lp.LEPHAREDIR))
 LEPHAREWORK = os.environ.get("LEPHAREWORK", (LEPHAREDIR / "work").as_posix())
 
 # default paths and filenames
-DEFAULT_INPUT_FILENAME = "roman_simulated_catalog.asdf"
+DEFAULT_INPUT_FILENAME = "roman_simulated_catalog.parquet"
 DEFAULT_INPUT_PATH = LEPHAREWORK
-DEFAULT_OUTPUT_FILENAME = "roman_photoz_results.asdf"
+DEFAULT_OUTPUT_FILENAME = "roman_photoz_results.parquet"
 DEFAULT_OUTPUT_PATH = LEPHAREWORK
-
-CWD = os.getcwd()
+DEFAULT_OUTPUT_KEYWORDS = Path(
+    pkg_resources.resource_filename(__name__, "data/default_roman_output.para")
+).as_posix()
 
 
 class RomanCatalogProcess:
@@ -79,17 +83,7 @@ class RomanCatalogProcess:
         self.flux_err_cols: list = []
         self.inform_stage = None
         self.estimated = None
-        # read in the elements from default_roman_output.para
-        default_output_file = Path(
-            pkg_resources.resource_filename(__name__, "data/default_roman_output.para")
-        )
-        if default_output_file.exists():
-            with open(default_output_file) as f:
-                self.default_roman_output_keys = [
-                    line.strip()
-                    for line in f
-                    if line.strip() and not line.startswith("#")
-                ]
+        self.default_roman_output_keys = read_output_keys(DEFAULT_OUTPUT_KEYWORDS)
 
     def set_config_file(self, config_filename: Union[dict, str] = ""):
         """
@@ -116,6 +110,8 @@ class RomanCatalogProcess:
         self,
         input_filename: str = DEFAULT_INPUT_FILENAME,
         input_path: str = DEFAULT_INPUT_PATH,
+        fit_colname: str = "segment_{}_flux",
+        fit_err_colname: str = "segment_{}_flux_err",
     ) -> Table:
         """
         Fetch the data from the input file.
@@ -137,45 +133,22 @@ class RomanCatalogProcess:
         logger.info(f"Reading catalog from {filename}")
 
         # read in catalog data
-        if Path(filename).suffix == ".asdf":
-            # Roman catalog
-            handler = RomanCatalogHandler(filename)
-            cat_data = Table(handler.process())
-        else:
-            # custom catalog
-            cat_data = Table.read(filename, format="ascii.no_header")
-
-        return cat_data
-
-    def format_data(self, cat_data: Table):
-        """
-        Format the catalog data.
-
-        Parameters
-        ----------
-        cat_data : Table
-            The catalog data.
-        """
-        # get information about Roman filters
-        bands = self.config["FILTER_LIST"].split(",")
-        logger.debug(f"Found {len(bands)} bands in filter list")
-
-        # loop over the filters we want to keep to get
-        # the number of the filter, n, and the name, b
-        # (the final data has to have  2 * n_bands + 4 columns)
-        for n, b in enumerate(bands):
-            flux = cat_data[cat_data.colnames[1 + 2 * n]].astype(float)
-            flux_err = cat_data[cat_data.colnames[2 + 2 * n]].astype(float)
-            self.data[f"flux_{b.split('_')[1].split('.')[0]}"] = flux
-            self.flux_cols.append(f"flux_{b.split('_')[1].split('.')[0]}")
-            self.data[f"flux_err_{b.split('_')[1].split('.')[0]}"] = flux_err
-            self.flux_err_cols.append(f"flux_err_{b.split('_')[1].split('.')[0]}")
-        self.data["context"] = np.array(cat_data[cat_data.colnames[-3]]).astype(int)
-        self.data["redshift"] = np.array(cat_data[cat_data.colnames[-2]]).astype(float)
-        self.data["string_data"] = np.array(cat_data[cat_data.colnames[-1]]).astype(
-            bytes
+        # if Path(filename).suffix == ".asdf":
+        # Roman catalog
+        handler = RomanCatalogHandler(
+            filename, fit_colname=fit_colname, fit_err_colname=fit_err_colname
         )
-        logger.info("Catalog data formatted successfully")
+
+        # Populate flux_cols and flux_err_cols from the handler's filter names
+        self.flux_cols = [
+            fit_colname.format(filter_id) for filter_id in handler.filter_names
+        ]
+        self.flux_err_cols = [
+            fit_err_colname.format(filter_id) for filter_id in handler.filter_names
+        ]
+
+        # Convert numpy structured array to astropy Table for RAIL compatibility
+        return Table(handler.catalog)
 
     def create_informer_stage(self):
         """
@@ -250,6 +223,7 @@ class RomanCatalogProcess:
         self,
         output_filename: str = DEFAULT_OUTPUT_FILENAME,
         output_path: str = LEPHAREWORK,
+        output_format: str = "parquet",
     ):
         """
         Save the results to the specified output file.
@@ -260,6 +234,9 @@ class RomanCatalogProcess:
             Name of the output file.
         output_path : str, optional
             Path to the output file.
+        output_format : str, optional
+            Format to save the results.
+            Supported formats are "parquet" (default) and "asdf".
 
         Raises
         ------
@@ -273,11 +250,14 @@ class RomanCatalogProcess:
             logger.error("No results to save")
             raise ValueError("No results to save.")
 
-        tree = {"roman_photoz_results": ancil_data}
-        with AsdfFile(tree) as af:
-            af.write_to(output_filename)
-
-        logger.info(f"Results saved to {output_filename}")
+        if output_format.lower() == "parquet":
+            ancil_data = Table(ancil_data)
+            ancil_data.write(output_filename, format="parquet")
+        elif output_format.lower() == "asdf":
+            tree = {"roman_photoz_results": ancil_data}
+            with AsdfFile(tree) as af:
+                af.write_to(output_filename)
+        logger.info(f"Results saved to {output_filename}.")
 
     def process(
         self,
@@ -285,7 +265,10 @@ class RomanCatalogProcess:
         input_path: str = DEFAULT_INPUT_PATH,
         output_filename: str = DEFAULT_OUTPUT_FILENAME,
         output_path: str = DEFAULT_OUTPUT_PATH,
+        output_format: str = "parquet",
         save_results: bool = True,
+        fit_colname: str = "segment_{}_flux",
+        fit_err_colname: str = "segment_{}_flux_err",
     ):
         """
         Process the Roman catalog data.
@@ -300,12 +283,22 @@ class RomanCatalogProcess:
             Name of the output file.
         output_path : str, optional
             Path to the output file.
+        output_format : str, optional
+            Format to save the results.
+            Supported formats are "parquet" (default) and "asdf."
         save_results : bool, optional
             Whether to save the results.
+        flux_type : str, optional
+            The type of flux to use for fitting.
+            Options are "psf" (default), "kron", "segment", or "aperture."
         """
-        cat_data = self.get_data(input_filename=input_filename, input_path=input_path)
+        self.data = self.get_data(
+            input_filename=input_filename,
+            input_path=input_path,
+            fit_colname=fit_colname,
+            fit_err_colname=fit_err_colname,
+        )
 
-        self.format_data(cat_data)
         if not self.informer_model_exists:
             print(
                 "Warning: The informer model file does not exist. Creating a new one..."
@@ -314,7 +307,11 @@ class RomanCatalogProcess:
         self.create_estimator_stage()
 
         if save_results:
-            self.save_results(output_filename=output_filename, output_path=output_path)
+            self.save_results(
+                output_filename=output_filename,
+                output_path=output_path,
+                output_format=output_format,
+            )
 
     @property
     def informer_model_exists(self):
@@ -352,80 +349,77 @@ class RomanCatalogProcess:
         return Path(informer_path, self.model_filename).as_posix()
 
 
-def _get_parser():
+def main():
     """
-    Create and return the argument parser for the roman_photoz command-line interface.
-
-    This function is used by both the main function and the Sphinx documentation.
-
-    Returns
-    -------
-    argparse.ArgumentParser
-        The configured argument parser
+    Main function to process Roman catalog data using command-line arguments.
+    This function parses command-line arguments for input/output files, configuration,
+    model files, and processing options, then runs the RomanCatalogProcess accordingly.
     """
+
     parser = argparse.ArgumentParser(description="Process Roman catalog data.")
     parser.add_argument(
-        "--config_filename",
+        "--config-filename",
         type=str,
         default="",
         help="Path to the configuration file (default: use default Roman config).",
         required=False,
     )
     parser.add_argument(
-        "--model_filename",
+        "--model-filename",
         type=str,
         default="roman_model.pkl",
         help="Name of the pickle model file (default: roman_model.pkl).",
         required=False,
     )
     parser.add_argument(
-        "--input_path",
+        "--input-path",
         type=str,
         default=DEFAULT_INPUT_PATH,
         help=f"Path to the catalog file (default: {DEFAULT_INPUT_PATH}).",
     )
     parser.add_argument(
-        "--input_filename",
+        "--input-filename",
         type=str,
         default=DEFAULT_INPUT_FILENAME,
         help=f"Input catalog filename (default: {DEFAULT_INPUT_FILENAME}).",
     )
     parser.add_argument(
-        "--output_path",
+        "--output-path",
         type=str,
         default=DEFAULT_OUTPUT_PATH,
         help=f"Path to where the results will be saved (default: {DEFAULT_OUTPUT_PATH}).",
     )
     parser.add_argument(
-        "--output_filename",
+        "--output-format",
+        type=str,
+        default="parquet",
+        help='Format in which to save the results. Supported formats are "parquet" (default) and "asdf".',
+    )
+    parser.add_argument(
+        "--output-filename",
         type=str,
         default=DEFAULT_OUTPUT_FILENAME,
         help=f"Output filename (default: {DEFAULT_OUTPUT_FILENAME}).",
     )
     parser.add_argument(
-        "--save_results",
+        "--save-results",
         type=bool,
         default=True,
         help="Save results? (default: True).",
     )
-    return parser
-
-
-def main(argv=None):
-    """
-    Main function to process Roman catalog data.
-
-    Parameters
-    ----------
-    argv : list, optional
-        List of command-line arguments.
-    """
-    if argv is None:
-        # skip the first argument (script name)
-        argv = sys.argv[1:]
-
-    parser = _get_parser()
-    args = parser.parse_args(argv)
+    parser.add_argument(
+        "--fit-colname",
+        type=str,
+        default="segment_{}_flux",
+        help="Template for the column name to be used for fitting fluxes/mags. It should contain a pair of curly braces as a placeholder for the filter ID, e.g., 'segment_{}_flux'.",
+    )
+    parser.add_argument(
+        "--fit-err-colname",
+        type=str,
+        default="segment_{}_flux_err",
+        help="Template for the column name containing the error corresponding to fit_colname. It should contain a pair of curly braces as a placeholder for the filter ID, e.g., 'segment_{}_flux_err'.",
+    )
+    args = parser.parse_args()
 
     try:
         logger.info("Starting Roman catalog processing")
@@ -437,7 +431,10 @@ def main(argv=None):
             input_path=args.input_path,
             output_filename=args.output_filename,
             output_path=args.output_path,
+            output_format=args.output_format,
             save_results=args.save_results,
+            fit_colname=args.fit_colname,
+            fit_err_colname=args.fit_err_colname,
         )
         logger.info("Roman catalog processing completed")
     except Exception as e:
