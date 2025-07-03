@@ -24,6 +24,7 @@ redshifts using rail/LePhare. Key features include:
 
    installation
    usage
+   regtest_framework
 
 .. toctree::
    :maxdepth: 2
@@ -33,6 +34,7 @@ redshifts using rail/LePhare. Key features include:
    roman_catalog_process
    roman_catalog_handler
    create_simulated_catalog
+
 
 API Reference
 -------------
