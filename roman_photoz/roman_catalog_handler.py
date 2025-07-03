@@ -16,7 +16,10 @@ class RomanCatalogHandler:
     """
 
     def __init__(
-        self, catname: str = "", fit_colname: str = "psf_{}_flux", fit_err_colname: str = "psf_{}_flux_err"
+        self,
+        catname: str = "",
+        fit_colname: str = "segment_{}_flux",
+        fit_err_colname: str = "segment_{}_flux_err",
     ):
         """
         Initialize the RomanCatalogHandler with a catalog name and the name of the columns to be used for fitting.
@@ -27,17 +30,17 @@ class RomanCatalogHandler:
             The name of the catalog file (default is an empty string).
         fit_colname : str
             Name of the column to be used for fitting.
-            It should contain a pair of curly braces as a placeholder for the filter ID, e.g., "psf_{}_flux".
+            It should contain a pair of curly braces as a placeholder for the filter ID, e.g., "segment_{}_flux".
         fit_err_colname : str
             Name of the column containing the error corresponding to fit_colname.
-            It should contain a pair of curly braces as a placeholder for the filter ID, e.g., "psf_{}_flux_err".
+            It should contain a pair of curly braces as a placeholder for the filter ID, e.g., "segment_{}_flux_err".
         """
         self.cat_name = catname
         self.fit_colname = fit_colname
         self.fit_err_colname = fit_err_colname
         self.cat_temp_filename = "cat_temp_file.csv"
         self.filter_names = get_roman_filter_list()
-        
+
         # Only read and format catalog if a filename is provided
         if catname:
             self.cat_array = self.read_catalog()
@@ -55,10 +58,12 @@ class RomanCatalogHandler:
         # Initialize catalog if it's empty or None
         if self.catalog is None or len(self.catalog) == 0:
             self.catalog = np.empty(len(self.cat_array), dtype=[])
-        
+
         # Only add label if it's not already present
         if "label" not in self.catalog.dtype.names:
-            self.catalog = rfn.append_fields(self.catalog, "label", self.cat_array["label"])
+            self.catalog = rfn.append_fields(
+                self.catalog, "label", self.cat_array["label"]
+            )
 
         for filter_id in self.filter_names:
             # Roman filter ID in format "fNNN"
@@ -149,7 +154,7 @@ class RomanCatalogHandler:
     def process(self):
         """
         Process the catalog by reading and formatting it.
-        
+
         Returns
         -------
         np.ndarray
@@ -170,6 +175,8 @@ if __name__ == "__main__":
     ).as_posix()
 
     catalog_handler = RomanCatalogHandler(
-        catname=test_cat, fit_colname="psf_{}_flux", fit_err_colname="psf_{}_flux_err"
+        catname=test_cat,
+        fit_colname="segment_{}_flux",
+        fit_err_colname="segment_{}_flux_err",
     )
     print("Done.")

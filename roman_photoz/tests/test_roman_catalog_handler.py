@@ -21,8 +21,8 @@ def mock_catalog_data(roman_catalog_handler, tmp_path):
     # Create fields dynamically based on actual filter names
     field_list = [("label", "i4")]
     for name in filter_names:
-        field_name = f"psf_{name}_flux"
-        field_err_name = f"psf_{name}_flux_err"
+        field_name = f"segment_{name}_flux"
+        field_err_name = f"segment_{name}_flux_err"
         field_list.append((field_name, "f8"))
         field_list.append((field_err_name, "f8"))
 
@@ -39,8 +39,8 @@ def mock_catalog_data(roman_catalog_handler, tmp_path):
 
     # Add test values for each filter field
     for i, name in enumerate(filter_names):
-        field_name = f"psf_{name}_flux"
-        field_err_name = f"psf_{name}_flux_err"
+        field_name = f"segment_{name}_flux"
+        field_err_name = f"segment_{name}_flux_err"
         data[field_name] = [100.0 + i * 10, 150.0 + i * 10, 200.0 + i * 10]
         data[field_err_name] = [5.0 + i * 0.5, 7.5 + i * 0.5, 10.0 + i * 0.5]
 
@@ -111,8 +111,8 @@ class TestRomanCatalogHandler:
 
         # Check that filter fields were added correctly
         for filter_name in roman_catalog_handler.filter_names:
-            flux_field = f"psf_{filter_name}_flux"
-            flux_err_field = f"psf_{filter_name}_flux_err"
+            flux_field = f"segment_{filter_name}_flux"
+            flux_err_field = f"segment_{filter_name}_flux_err"
             assert flux_field in roman_catalog_handler.catalog.dtype.names
             assert flux_err_field in roman_catalog_handler.catalog.dtype.names
 

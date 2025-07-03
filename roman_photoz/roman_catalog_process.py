@@ -110,8 +110,8 @@ class RomanCatalogProcess:
         self,
         input_filename: str = DEFAULT_INPUT_FILENAME,
         input_path: str = DEFAULT_INPUT_PATH,
-        fit_colname: str = "psf_{}_flux",
-        fit_err_colname: str = "psf_{}_flux_err",
+        fit_colname: str = "segment_{}_flux",
+        fit_err_colname: str = "segment_{}_flux_err",
     ) -> Table:
         """
         Fetch the data from the input file.
@@ -267,8 +267,8 @@ class RomanCatalogProcess:
         output_path: str = DEFAULT_OUTPUT_PATH,
         output_format: str = "parquet",
         save_results: bool = True,
-        fit_colname: str = "psf_{}_flux",
-        fit_err_colname: str = "psf_{}_flux_err",
+        fit_colname: str = "segment_{}_flux",
+        fit_err_colname: str = "segment_{}_flux_err",
     ):
         """
         Process the Roman catalog data.
@@ -410,14 +410,14 @@ def main():
     parser.add_argument(
         "--fit-colname",
         type=str,
-        default="psf_{}_flux",
-        help="Template for the column name to be used for fitting fluxes/mags. It should contain a pair of curly braces as a placeholder for the filter ID, e.g., 'psf_{}_flux'.",
+        default="segment_{}_flux",
+        help="Template for the column name to be used for fitting fluxes/mags. It should contain a pair of curly braces as a placeholder for the filter ID, e.g., 'segment_{}_flux'.",
     )
     parser.add_argument(
         "--fit-err-colname",
         type=str,
-        default="psf_{}_flux_err",
-        help="Template for the column name containing the error corresponding to fit_colname. It should contain a pair of curly braces as a placeholder for the filter ID, e.g., 'psf_{}_flux_err'.",
+        default="segment_{}_flux_err",
+        help="Template for the column name containing the error corresponding to fit_colname. It should contain a pair of curly braces as a placeholder for the filter ID, e.g., 'segment_{}_flux_err'.",
     )
     args = parser.parse_args()
 
