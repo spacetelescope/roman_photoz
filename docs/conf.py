@@ -23,7 +23,6 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
     "sphinxarg.ext",  # For automatic documentation of argparse arguments
-    "myst_parser",  # For Markdown support
 ]
 
 templates_path = ["_templates"]
