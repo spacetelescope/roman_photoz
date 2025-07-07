@@ -7,13 +7,14 @@ from pathlib import Path
 
 import lephare as lp
 import numpy as np
+from astropy.table import Table
 from numpy.lib import recfunctions as rfn
 from rail.core.stage import RailStage
-from roman_datamodels import datamodels as rdm
 
 from roman_photoz import create_roman_filters
 from roman_photoz.default_config_file import default_roman_config
 from roman_photoz.logger import logger
+from roman_photoz.utils import save_catalog, get_roman_filter_list
 
 ROMAN_DEFAULT_CONFIG = default_roman_config
 
@@ -25,7 +26,7 @@ LEPHAREWORK = os.environ.get(
     "LEPHAREWORK", (Path(LEPHAREDIR).parent / "work").as_posix()
 )
 CWD = os.getcwd()
-DEFAULT_OUTPUT_CATALOG_FILENAME = "roman_simulated_catalog.asdf"
+DEFAULT_OUTPUT_CATALOG_FILENAME = "roman_simulated_catalog.parquet"
 
 
 class SimulatedCatalog:
@@ -56,7 +57,7 @@ class SimulatedCatalog:
         Placeholder for simulated data.
     """
 
-    def __init__(self):
+    def __init__(self, include_errors: bool = False):
         """
         Initializes the SimulatedCatalog class.
         """
@@ -67,16 +68,9 @@ class SimulatedCatalog:
         self.flux_err_cols = []
         self.inform_stage = None
         self.estimated = None
-        self.filter_lib = None
         self.simulated_data_filename = ""
         self.simulated_data = None
-        self.roman_catalog_template = self.read_roman_template_catalog()
-
-    def read_roman_template_catalog(self):
-        input_filename = "roman_catalog_template.asdf"
-        this_path = Path(__file__).resolve().parent
-        input_path = (this_path / "data" / input_filename).as_posix()
-        return rdm.open(input_path)
+        self.include_errors = include_errors
 
     def is_folder_not_empty(self, folder_path: str, partial_text: str) -> bool:
         """
@@ -100,13 +94,12 @@ class SimulatedCatalog:
                 return True
         return False
 
-    def get_filters(self):
+    def create_filter_files(self):
         """
-        Retrieve or create filter files for the Roman telescope.
+        Create filter files for the Roman telescope.
 
         This method checks if the required filter files are present in the specified directory.
-        If not, it generates them using the `create_roman_filters` module. It also initializes
-        the filter library using the LePhare configuration.
+        If not, it generates them using the `create_roman_filters` module.
 
         Raises
         ------
@@ -120,9 +113,6 @@ class SimulatedCatalog:
             logger.info("Filter files not found, generating them...")
             create_roman_filters.run()
 
-        self.filter_lib = lp.FilterSvc.from_keymap(
-            lp.all_types_to_keymap(self.lephare_config)
-        )
         logger.info(
             f"Created filter library using the filter files in {self.lephare_config['FILTER_REP']}/roman."
         )
@@ -166,6 +156,13 @@ class SimulatedCatalog:
     ):
         """
         Create a simulated input catalog from the simulated data.
+
+        + read the ROMAN_SIMULATED_MAGS.dat produced by LePhare's
+            `prepare` method in `create_simulated_input_catalog`. The
+            columns name are defined by LePhare.
+
+        + format the columns name to match Roman catalog's specifications
+
         """
         catalog_name = Path(
             LEPHAREWORK, "lib_mag", f"{self.simulated_data_filename}.dat"
@@ -184,14 +181,14 @@ class SimulatedCatalog:
         ]
 
         # we're matching the number of objects in the template
-        num_lines = len(self.roman_catalog_template.source_catalog)
+        num_lines = -1  # len(self.roman_catalog_template)
         random_lines = self.pick_random_lines(num_lines)
         catalog = random_lines[cols_to_keep]
 
         final_catalog = self.add_error(catalog)
         final_catalog = self.add_ids(final_catalog)
 
-        context = np.full((num_lines), 0)
+        context = np.full((len(catalog)), 0)
         # zspec = np.full((num_lines), np.nan)
         zspec = final_catalog["redshift"]
         string_data = final_catalog["redshift"]
@@ -206,107 +203,14 @@ class SimulatedCatalog:
         # remove the redshift column
         final_catalog = rfn.drop_fields(final_catalog, ["redshift"])
 
-        self.update_roman_catalog_template(final_catalog)
-        # now that self.roman_catalog_template has been updated, we can get rid of
-        # the simulated data and the simulated data filename
-        del final_catalog
+        final_catalog = Table(final_catalog)
 
-        self.save_catalog(
+        save_catalog(
+            final_catalog,
             output_filename=output_filename,
             output_path=output_path,
+            overwrite=True,
         )
-
-    def update_roman_catalog_template(self, catalog):
-        """
-        Update the Roman catalog template with the simulated data.
-
-        Parameters
-        ----------
-        catalog : np.ndarray
-            The catalog data to update the Roman catalog template with.
-        """
-        filter_list = (
-            default_roman_config["FILTER_LIST"]
-            .replace("roman/roman_", "")
-            .replace(".pb", "")
-            .split(",")
-        )
-        # in the asdf template file we only have the flux in
-        # the F158 filter so we're adding the other filters
-        roman_filter_params = [
-            x.replace("F158", "")
-            for x in self.roman_catalog_template.source_catalog.columns
-            if "F158" in x
-        ]
-
-        # # first, clear the template
-        # self.roman_catalog_template.source_catalog.remove_rows(slice(None))
-        self.roman_catalog_template.source_catalog.add_column(catalog["id"], name="id")
-
-        # then add the simulated data
-        for filter_name in filter_list:
-            for param in roman_filter_params:
-                new_column = f"{filter_name}{param}"
-                if new_column not in self.roman_catalog_template.source_catalog.columns:
-                    # add new column
-                    if "flux" in new_column:
-                        # add flux and error columns for each filter
-                        simulated_colname = (
-                            f"magnitude_{filter_name}_err"
-                            if "err" in new_column
-                            else f"magnitude_{filter_name}"
-                        )
-                        self.roman_catalog_template.source_catalog.add_column(
-                            catalog[simulated_colname], name=new_column
-                        )
-                    else:
-                        # copy parameter from F158
-                        simulated_colname = new_column
-                        self.roman_catalog_template.source_catalog.add_column(
-                            self.roman_catalog_template.source_catalog[f"F158{param}"],
-                            name=new_column,
-                        )
-
-                else:
-                    # replace column data
-                    if "flux" in new_column:
-                        simulated_colname = (
-                            f"magnitude_{filter_name}_err"
-                            if "err" in new_column
-                            else f"magnitude_{filter_name}"
-                        )
-                        self.roman_catalog_template.source_catalog[new_column] = (
-                            catalog[simulated_colname]
-                        )
-
-        self.roman_catalog_template.source_catalog.add_column(
-            catalog["context"], name="context"
-        )
-        self.roman_catalog_template.source_catalog.add_column(
-            catalog["zspec"], name="zspec"
-        )
-        self.roman_catalog_template.source_catalog.add_column(
-            catalog["z_true"], name="string_data"
-        )
-
-    def save_catalog(
-        self,
-        output_path: str = LEPHAREWORK,
-        output_filename: str = DEFAULT_OUTPUT_CATALOG_FILENAME,
-    ):
-        """
-        Save the simulated input catalog to a file.
-
-        Parameters
-        ----------
-        output_filename : str, optional
-            The filename to save the catalog to.
-        """
-        output_path = Path(output_path).as_posix()
-        output_filename = output_filename
-        logger.info(f"Saving catalog to {output_path}/{output_filename}...")
-        self.roman_catalog_template.save(output_filename, dir_path=output_path)
-        logger.info("Catalog saved successfully")
 
     def add_ids(self, catalog):
         """
@@ -323,10 +227,12 @@ class SimulatedCatalog:
             The catalog data with an ID column added.
         """
         ids = np.arange(1, len(catalog) + 1)
-        catalog = rfn.append_fields(catalog, "id", ids, usemask=False)
+        catalog = rfn.append_fields(catalog, "label", ids, usemask=False)
 
-        new_dtype = [("id", catalog["id"].dtype)] + [
-            (name, catalog[name].dtype) for name in catalog.dtype.names if name != "id"
+        new_dtype = [("label", catalog["label"].dtype)] + [
+            (name, catalog[name].dtype)
+            for name in catalog.dtype.names
+            if name != "label"
         ]
         new_catalog = np.empty(catalog.shape, dtype=new_dtype)
         for name in new_catalog.dtype.names:
@@ -362,6 +268,10 @@ class SimulatedCatalog:
         np.ndarray
             The catalog data with error columns added.
         """
+        if not self.include_errors:
+            logger.info("Skipping error addition to the simulated catalog.")
+            return catalog
+
         rng = np.random.default_rng(seed=seed)
         new_dtype = []
         for col in catalog.dtype.names:
@@ -397,12 +307,7 @@ class SimulatedCatalog:
         list
             The list of column names for the catalog.
         """
-        filter_list = (
-            self.lephare_config.get("FILTER_LIST")
-            .replace(".pb", "")
-            .replace("roman/roman_", "")
-            .split(",")
-        )
+        filter_list = get_roman_filter_list()
         with open(catalog_name) as f:
             # BEWARE of the format of LAPHEREWORK/lib_mag/ROMAN_SIMULATED_MAGS.dat!
             # ignore the first N_filt lines in the file
@@ -436,20 +341,23 @@ class SimulatedCatalog:
         np.ndarray
             An array containing the randomly picked lines.
         """
-        if self.simulated_data is None:
-            raise ValueError(
-                "Data array is not initialized. Please run create_simulated_input_catalog first."
-            )
+        if num_lines > 0:
+            if self.simulated_data is None:
+                raise ValueError(
+                    "Data array is not initialized. Please run create_simulated_input_catalog first."
+                )
 
-        total_lines = len(self.simulated_data)
-        if num_lines > total_lines:
-            raise ValueError(
-                f"Requested {num_lines} lines, but only {total_lines} lines are available."
-            )
+            total_lines = len(self.simulated_data)
+            if num_lines > total_lines:
+                raise ValueError(
+                    f"Requested {num_lines} lines, but only {total_lines} lines are available."
+                )
 
-        rng = np.random.default_rng()
-        random_indices = rng.choice(total_lines, num_lines, replace=False)
-        return self.simulated_data[random_indices]
+            rng = np.random.default_rng()
+            random_indices = rng.choice(total_lines, num_lines, replace=False)
+            return self.simulated_data[random_indices]
+        else:
+            return self.simulated_data
 
     def process(
         self,
@@ -459,7 +367,7 @@ class SimulatedCatalog:
         """
         Run the process to create the simulated catalog.
         """
-        self.get_filters()
+        self.create_filter_files()
         self.create_simulated_data()
         self.create_simulated_input_catalog(
             output_filename=output_filename,
@@ -469,31 +377,39 @@ class SimulatedCatalog:
         logger.info("DONE")
 
 
-if __name__ == "__main__":
-
+def main():
     def parse_args():
         parser = argparse.ArgumentParser(
             description="Create a simulated catalog using the Roman telescope data."
         )
         parser.add_argument(
-            "--output_path",
+            "--output-path",
             type=str,
             default=LEPHAREWORK,
             help="Path to save the output catalog.",
         )
         parser.add_argument(
-            "--output_filename",
+            "--output-filename",
             type=str,
             default=DEFAULT_OUTPUT_CATALOG_FILENAME,
             help="Filename for the output catalog.",
+        )
+        parser.add_argument(
+            "--add-error",
+            action="store_true",
+            help="Optionally add error to the simulated catalog.",
         )
         return parser.parse_args()
 
     args = parse_args()
 
     logger.info("Starting simulated catalog creation...")
-    rcp = SimulatedCatalog()
+    rcp = SimulatedCatalog(include_errors=args.add_error)
     rcp.process(args.output_path, args.output_filename)
     logger.info("Simulated catalog creation completed successfully")
 
     logger.info("Done.")
+
+
+if __name__ == "__main__":
+    main()

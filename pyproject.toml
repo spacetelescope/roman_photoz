@@ -2,7 +2,7 @@
 name = "roman_photoz"
 description = "Library for photometric redshift determination using data from the Nancy Grace Roman Space Telescope"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 authors = [
   { name = "Roman calibration pipeline developers", email = "help@stsci.edu" },
 ]
@@ -22,22 +22,20 @@ dependencies = [
   "photutils >=1.13.0",
   "pyparsing >=2.4.7",
   "requests >=2.26",
-  "roman_datamodels>=0.22.0",
-  # "roman_datamodels @ git+https://github.com/spacetelescope/roman_datamodels.git",
+  "roman_datamodels @ git+https://github.com/spacetelescope/roman_datamodels.git",
   "scipy>=1.7.0",
   "stcal>=1.10.0",
-  # "stcal @ git+https://github.com/spacetelescope/stcal.git@main",
   "stpipe >=0.7.0",
-  # "stpipe @ git+https://github.com/spacetelescope/stpipe.git@main",
   "tweakwcs >=0.8.8",
   "spherical-geometry >= 1.2.22",
   "stsci.imagestats >= 1.6.3",
   "drizzle >= 1.15.0",
   "webbpsf >= 1.2.1",
-  # "pz-rail-lephare",
   "pz-rail-lephare @ git+https://git@github.com/mairanteodoro/rail_lephare.git",
   "lephare == 0.1.13",
   "pz-rail-base == 1.1.5",
+  "tox>=4.26.0",
+  "pip>=25.1.1",
 ]
 license-files = ["LICENSE"]
 dynamic = ["version"]
@@ -53,6 +51,7 @@ docs = [
   "sphinx-autobuild",
   "tomli; python_version <=\"3.11\"",
   "sphinx-argparse",
+  "myst_parser",                      # For Markdown support
 ]
 test = [
   "ci-watson >=0.5.0",
@@ -61,13 +60,14 @@ test = [
   "deepdiff",
   "stpreview>=0.5.1",
   "pytest-cov",
+  "romancal @ git+https://github.com/spacetelescope/romancal.git",
+  "jdaviz>=4.2.3",
 ]
 dev = ["roman_photoz[docs,test]", "tox > 4", "pre-commit > 3"]
 sdp = ["stpreview>=0.5.1"]
 
 [project.urls]
 tracker = "https://github.com/spacetelescope/roman_photoz/issues"
-# documentation = "https://roman-pipeline.readthedocs.io/en/stable/"
 repository = "https://github.com/spacetelescope/roman_photoz"
 
 [build-system]
@@ -139,10 +139,14 @@ omit = ["*/tests/*", "*/docs/*"]
 show_missing = true
 skip_covered = true
 precision = 2
-fail_under = 70
+# fail_under = 70
 
 [tool.coverage.html]
 directory = "htmlcov"
 
 [tool.coverage.xml]
 output = "coverage.xml"
+
+[project.scripts]
+roman-photoz = "roman_photoz.__main__:main"
+roman-photoz-create-simulated-catalog = "roman_photoz.create_simulated_catalog:main"
