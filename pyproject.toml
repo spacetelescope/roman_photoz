@@ -22,7 +22,6 @@ dependencies = [
   "photutils >=1.13.0",
   "pyparsing >=2.4.7",
   "requests >=2.26",
-  "roman_datamodels @ git+https://github.com/spacetelescope/roman_datamodels.git",
   "scipy>=1.7.0",
   "stcal>=1.10.0",
   "stpipe >=0.7.0",
@@ -34,8 +33,6 @@ dependencies = [
   "pz-rail-lephare @ git+https://git@github.com/mairanteodoro/rail_lephare.git",
   "lephare == 0.1.13",
   "pz-rail-base == 1.1.5",
-  "tox>=4.26.0",
-  "pip>=25.1.1",
 ]
 license-files = ["LICENSE"]
 dynamic = ["version"]
@@ -49,9 +46,9 @@ docs = [
   "sphinx-rtd-theme",
   "stsci-rtd-theme",
   "sphinx-autobuild",
-  "tomli; python_version <=\"3.11\"",
+  "tomli",
   "sphinx-argparse",
-  "myst_parser",                      # For Markdown support
+  "myst_parser",       # For Markdown support
 ]
 test = [
   "ci-watson >=0.5.0",
@@ -60,8 +57,8 @@ test = [
   "deepdiff",
   "stpreview>=0.5.1",
   "pytest-cov",
-  "romancal @ git+https://github.com/spacetelescope/romancal.git",
-  "jdaviz>=4.2.3",
+  "romancal @ git+https://git@github.com/spacetelescope/romancal.git@main",
+  "romanisim @ git+https://git@github.com/mairanteodoro/romanisim.git@main",
 ]
 dev = ["roman_photoz[docs,test]", "tox > 4", "pre-commit > 3"]
 sdp = ["stpreview>=0.5.1"]
