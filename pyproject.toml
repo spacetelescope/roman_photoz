@@ -33,7 +33,7 @@ dependencies = [
   "pz-rail-lephare @ git+https://git@github.com/mairanteodoro/rail_lephare.git",
   "lephare == 0.1.13",
   "pz-rail-base == 1.1.5",
-  "roman-datamodels @ git+https://git@github.com/spacetelescope/roman-datamodels.git@main",
+  "roman-datamodels @ git+https://git@github.com/spacetelescope/roman_datamodels.git@main",
 ]
 license-files = ["LICENSE"]
 dynamic = ["version"]
