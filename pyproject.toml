@@ -34,6 +34,7 @@ dependencies = [
   "lephare == 0.1.13",
   "pz-rail-base == 1.1.5",
   "roman-datamodels",
+  "rad @ git+https://github.com/spacetelescope/rad.git",
 ]
 license-files = ["LICENSE"]
 dynamic = ["version"]
@@ -59,7 +60,7 @@ test = [
   "stpreview>=0.5.1",
   "pytest-cov",
   "romancal @ git+https://git@github.com/spacetelescope/romancal.git@main",
-  "romanisim @ git+https://git@github.com/mairanteodoro/romanisim.git@main",
+  # "romanisim @ git+https://git@github.com/spacetelescope/romanisim.git@main",  # Temporarily disabled due to gwcs version conflict
 ]
 dev = ["roman_photoz[docs,test]", "tox > 4", "pre-commit > 3"]
 sdp = ["stpreview>=0.5.1"]
@@ -148,3 +149,4 @@ output = "coverage.xml"
 [project.scripts]
 roman-photoz = "roman_photoz.__main__:main"
 roman-photoz-create-simulated-catalog = "roman_photoz.create_simulated_catalog:main"
+roman-photoz-create-simulated-catalog-old = "roman_photoz.create_simulated_catalog_old:main"

@@ -8,6 +8,8 @@ from roman_datamodels import datamodels as rdm
 
 from roman_photoz.logger import logger
 from roman_photoz.utils import get_roman_filter_list
+import astropy.units as u
+import math
 
 
 class RomanCatalogHandler:
@@ -40,15 +42,12 @@ class RomanCatalogHandler:
         self.fit_err_colname = fit_err_colname
         self.cat_temp_filename = "cat_temp_file.csv"
         self.filter_names = get_roman_filter_list()
+        self.cat_array = None
+        self.catalog = None
 
         # Only read and format catalog if a filename is provided
         if catname:
-            self.cat_array = self.read_catalog()
-            self.catalog = np.empty(0, dtype=[])
-            self.format_catalog()
-        else:
-            self.cat_array = None
-            self.catalog = None
+            self.process()
 
     def format_catalog(self):
         """
@@ -151,6 +150,23 @@ class RomanCatalogHandler:
         logger.info("Catalog read successfully")
         return cat_array
 
+    def njy_to_abmag(self):
+        # convert AB magnitude to flux density in nJy
+        for x in self.catalog.dtype.names:
+            if x != "label":
+                if "_err" not in x:
+                    # convert from nJy to AB magnitude
+                    res = (self.catalog[x] * u.nJy).to(u.ABmag).value
+                else:
+                    # propagate error in flux to error in AB mag
+                    res = (
+                        (2.5 / math.log(10))
+                        * self.catalog[x]
+                        / self.catalog[x.replace("_err", "")]
+                    )
+                # store the converted values back in the catalog
+                self.catalog[x] = res
+
     def process(self):
         """
         Process the catalog by reading and formatting it.
@@ -165,6 +181,7 @@ class RomanCatalogHandler:
         if self.catalog is None or len(self.catalog) == 0:
             self.catalog = np.empty(0, dtype=[])
             self.format_catalog()
+            self.njy_to_abmag()
         return self.catalog
 
 
