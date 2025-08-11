@@ -26,7 +26,13 @@ license-files = ["LICENSE"]
 dynamic = ["version"]
 
 [project.optional-dependencies]
-docs = ["matplotlib", "sphinx", "sphinx-rtd-theme", "sphinx-argparse"]
+docs = [
+  "matplotlib",
+  "sphinx",
+  "sphinx-rtd-theme",
+  "sphinx-argparse",
+  "myst_parser",
+]
 test = [
   "pytest >=8.0.0",
   "pytest-cov",
