@@ -80,5 +80,5 @@ def test_roman_photoz(rtdata, tmp_path):
     assert all(
         col in expected_cols
         for col in output.colnames
-        if col != "zmean" and col != "zmode"
+        if col not in ["zmean", "zmode", "redshift"]
     )

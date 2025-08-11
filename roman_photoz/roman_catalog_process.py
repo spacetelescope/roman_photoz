@@ -215,6 +215,7 @@ class RomanCatalogProcess:
             lephare_config=self.config,
             star_config=None,
             qso_config=None,
+            use_inform_offsets=False,
         )
 
         self.estimated = estimate_lephare.estimate(self.data)
@@ -438,6 +439,5 @@ def main():
         )
         logger.info("Roman catalog processing completed")
     except Exception as e:
-        breakpoint()
         logger.error(f"An error occurred during processing: {str(e)}")
         sys.exit(1)

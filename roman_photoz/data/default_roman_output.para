@@ -1,4 +1,3 @@
-IDENT
 # Zphot from minimum chi2 (MIN distribution)
 Z_BEST
 # Zphot min from Delta_chi^2=1.0 (68%)
@@ -98,7 +97,3 @@ SCALE_BEST
 NBAND_USED
 # context
 CONTEXT
-# z step, min, max
-ZSPEC
-# All the information after zspec in the input file
-STRING_INPUT
