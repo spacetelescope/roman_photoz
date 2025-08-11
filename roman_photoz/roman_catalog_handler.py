@@ -153,8 +153,9 @@ class RomanCatalogHandler:
     def njy_to_abmag(self):
         # convert AB magnitude to flux density in nJy
         for x in self.catalog.dtype.names:
-            if x != "label":
-                if "_err" not in x:
+            res = self.catalog[x]
+            if "flux" in x:
+                if "err" not in x:
                     # convert from nJy to AB magnitude
                     res = (self.catalog[x] * u.nJy).to(u.ABmag).value
                 else:
@@ -164,8 +165,8 @@ class RomanCatalogHandler:
                         * self.catalog[x]
                         / self.catalog[x.replace("_err", "")]
                     )
-                # store the converted values back in the catalog
-                self.catalog[x] = res
+            # store the converted values back in the catalog
+            self.catalog[x] = res
 
     def process(self):
         """
