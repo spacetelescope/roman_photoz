@@ -222,13 +222,15 @@ class SimulatedCatalog:
         final_catalog = self.add_ids(final_catalog)
 
         context = np.full((len(catalog)), 0)
-        zspec = final_catalog["redshift"]
+        redshift = final_catalog["redshift"]
         string_data = final_catalog["redshift"]
 
         final_catalog = rfn.append_fields(
             final_catalog, "context", context, usemask=False
         )
-        final_catalog = rfn.append_fields(final_catalog, "zspec", zspec, usemask=False)
+        final_catalog = rfn.append_fields(
+            final_catalog, "redshift", redshift, usemask=False
+        )
         final_catalog = rfn.append_fields(
             final_catalog, "z_true", string_data, usemask=False
         )
@@ -311,7 +313,7 @@ class SimulatedCatalog:
                     )
 
         simulated_roman_catalog.add_column(catalog["context"], name="context")
-        simulated_roman_catalog.add_column(catalog["zspec"], name="zspec")
+        simulated_roman_catalog.add_column(catalog["redshift"], name="redshift")
         simulated_roman_catalog.add_column(catalog["z_true"], name="string_data")
 
         return simulated_roman_catalog

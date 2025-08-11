@@ -26,7 +26,7 @@ def mock_catalog_data(roman_catalog_handler, tmp_path):
         field_list.append((field_name, "f8"))
         field_list.append((field_err_name, "f8"))
 
-    field_list.extend([("context", "i4"), ("zspec", "f8"), ("string_data", "S20")])
+    field_list.extend([("context", "i4"), ("redshift", "f8"), ("string_data", "S20")])
 
     dt = np.dtype(field_list)
 
@@ -34,7 +34,7 @@ def mock_catalog_data(roman_catalog_handler, tmp_path):
     data = np.zeros(3, dtype=dt)
     data["label"] = [1, 2, 3]
     data["context"] = [1, 1, 2]
-    data["zspec"] = [0.5, 1.0, 1.5]
+    data["redshift"] = [0.5, 1.0, 1.5]
     data["string_data"] = [b"source1", b"source2", b"source3"]
 
     # Add test values for each filter field
@@ -118,7 +118,7 @@ class TestRomanCatalogHandler:
 
         # Check that additional required fields were added
         assert "context" in roman_catalog_handler.catalog.dtype.names
-        assert "zspec" in roman_catalog_handler.catalog.dtype.names
+        assert "redshift" in roman_catalog_handler.catalog.dtype.names
         assert "string_data" in roman_catalog_handler.catalog.dtype.names
 
         # Check that data was copied correctly for a sample field
@@ -126,7 +126,8 @@ class TestRomanCatalogHandler:
             roman_catalog_handler.catalog["label"][0] == mock_catalog_data["label"][0]
         )
         assert (
-            roman_catalog_handler.catalog["zspec"][1] == mock_catalog_data["zspec"][1]
+            roman_catalog_handler.catalog["redshift"][1]
+            == mock_catalog_data["redshift"][1]
         )
 
     @patch("roman_photoz.roman_catalog_handler.RomanCatalogHandler.read_catalog")
@@ -172,7 +173,7 @@ class TestRomanCatalogHandler:
         assert result is not None
         assert "label" in result.dtype.names
         assert "context" in result.dtype.names
-        assert "zspec" in result.dtype.names
+        assert "redshift" in result.dtype.names
         assert "string_data" in result.dtype.names
 
 

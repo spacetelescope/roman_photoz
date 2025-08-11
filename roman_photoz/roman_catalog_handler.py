@@ -107,13 +107,13 @@ class RomanCatalogHandler:
                 ),
                 usemask=False,
             )
-        if "zspec" not in self.catalog.dtype.names:
+        if "redshift" not in self.catalog.dtype.names:
             self.catalog = rfn.append_fields(
                 self.catalog,
-                "zspec",
+                "redshift",
                 (
-                    self.cat_array["zspec"]
-                    if "zspec" in self.cat_array.dtype.names
+                    self.cat_array["redshift"]
+                    if "redshift" in self.cat_array.dtype.names
                     else np.zeros(len(self.cat_array), dtype=int)
                 ),
                 usemask=False,
