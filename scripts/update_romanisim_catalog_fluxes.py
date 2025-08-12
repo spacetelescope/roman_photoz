@@ -13,9 +13,12 @@ def create_random_catalog(table: Table, n: int, seed: int = 13):
     return table[idx]
 
 
-def update_fluxes(target_catalog: Table, flux_catalog: Table) -> Table:
+def njy_to_mgy(flux):
     zero_point_flux = u.zero_point_flux(3631 * u.Jy)  # 1 maggy = 3631 Jy
+    return flux.to(u.mgy, zero_point_flux)
 
+
+def update_fluxes(target_catalog: Table, flux_catalog: Table) -> Table:
     fudge_factor = 100
     # LePhare catalog magnitudes seem to peak out at an absolute galaxy magnitude of -15
     # or so, while an L* galaxy should be more like -21.
@@ -36,13 +39,12 @@ def update_fluxes(target_catalog: Table, flux_catalog: Table) -> Table:
             continue
         fluxname = f"segment_{colname.lower()}_flux"
         # convert from nJy (Roman  to maggies (romanisim_input_catalog)
-        target_catalog[colname] = (flux_catalog[fluxname]).to(
-            u.mgy, zero_point_flux
-        ) * fudge_factor
+        target_catalog[colname] = (
+            njy_to_mgy(flux_catalog[fluxname]) * fudge_factor)
 
-    # add source ID from roman_simulated_catalog
+    # Add source ID from roman_simulated_catalog
     target_catalog["label"] = flux_catalog["label"]
-    target_catalog["ztrue"] = flux_catalog["ztrue"]
+    target_catalog["redshift_true"] = flux_catalog["redshift_true"]
 
     return target_catalog
 
