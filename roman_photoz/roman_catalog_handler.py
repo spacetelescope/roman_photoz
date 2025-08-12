@@ -56,13 +56,11 @@ class RomanCatalogHandler:
         logger.info("Formatting catalog...")
         # Initialize catalog if it's empty or None
         if self.catalog is None or len(self.catalog) == 0:
-            self.catalog = np.empty(len(self.cat_array), dtype=[])
+            self.catalog = Table()
 
         # Only add label if it's not already present
         if "label" not in self.catalog.dtype.names:
-            self.catalog = rfn.append_fields(
-                self.catalog, "label", self.cat_array["label"]
-            )
+            self.catalog['label'] = self.cat_array['label']
 
         for filter_id in self.filter_names:
             # Roman filter ID in format "fNNN"
@@ -79,56 +77,29 @@ class RomanCatalogHandler:
                 # equivalent to use all the passbands for all the objects.
                 # However, the code checks the error and flux values.
                 # If both values are negative, the band is not used."
-                value = np.full(len(self.cat_array), -99, dtype=int)
-                error = np.full(len(self.cat_array), -99, dtype=int)
+                value = np.full(len(self.cat_array), -99, dtype=np.float32)
+                error = np.full(len(self.cat_array), -99, dtype=np.float32)
 
             # Only add fields if they don't already exist
             if fit_colname not in self.catalog.dtype.names:
-                self.catalog = rfn.append_fields(
-                    self.catalog,
-                    fit_colname,
-                    value,
-                )
+                self.catalog[fit_colname] = value
+
             if fit_err_colname not in self.catalog.dtype.names:
-                self.catalog = rfn.append_fields(
-                    self.catalog,
-                    fit_err_colname,
-                    error,
-                )
-        # populate additional required columns only if they don't exist
-        if "context" not in self.catalog.dtype.names:
-            self.catalog = rfn.append_fields(
-                self.catalog,
-                "context",
-                (
-                    self.cat_array["context"]
-                    if "context" in self.cat_array.dtype.names
-                    else np.zeros(len(self.cat_array), dtype=int)
-                ),
-                usemask=False,
-            )
-        if "redshift" not in self.catalog.dtype.names:
-            self.catalog = rfn.append_fields(
-                self.catalog,
-                "redshift",
-                (
-                    self.cat_array["redshift"]
-                    if "redshift" in self.cat_array.dtype.names
-                    else np.zeros(len(self.cat_array), dtype=int)
-                ),
-                usemask=False,
-            )
-        if "string_data" not in self.catalog.dtype.names:
-            self.catalog = rfn.append_fields(
-                self.catalog,
-                "string_data",
-                (
-                    self.cat_array["string_data"]
-                    if "string_data" in self.cat_array.dtype.names
-                    else np.full(len(self.cat_array), "")
-                ),
-                usemask=False,
-            )
+                self.catalog[fit_err_colname] = error
+
+            # lephare expects fluxes in erg/s/cm^2/Hz
+            # we need to convert from nJy
+            # 10^-23 erg / s / ... = 1 Jy
+            # 10^-9 Jy = 1 nJy
+            # => 10^-32 erg / s / ... = 1 nJy
+            m = self.catalog[fit_err_colname] > 0
+            self.catalog[fit_colname][m] *= 10**-32
+            self.catalog[fit_err_colname][m] *= 10**-32
+
+        if "redshift" not in self.cat_array.dtype.names:
+            self.catalog['redshift'] = np.zeros(len(self.catalog), dtype='f4')
+        else:
+            self.catalog['redshift'] = self.cat_array['redshift']
 
         logger.info("Catalog formatting completed")
 
@@ -150,24 +121,6 @@ class RomanCatalogHandler:
         logger.info("Catalog read successfully")
         return cat_array
 
-    def njy_to_abmag(self):
-        # convert AB magnitude to flux density in nJy
-        for x in self.catalog.dtype.names:
-            res = self.catalog[x]
-            if "flux" in x:
-                if "err" not in x:
-                    # convert from nJy to AB magnitude
-                    res = (self.catalog[x] * u.nJy).to(u.ABmag).value
-                else:
-                    # propagate error in flux to error in AB mag
-                    res = (
-                        (2.5 / math.log(10))
-                        * self.catalog[x]
-                        / self.catalog[x.replace("_err", "")]
-                    )
-            # store the converted values back in the catalog
-            self.catalog[x] = res
-
     def process(self):
         """
         Process the catalog by reading and formatting it.
@@ -182,7 +135,6 @@ class RomanCatalogHandler:
         if self.catalog is None or len(self.catalog) == 0:
             self.catalog = np.empty(0, dtype=[])
             self.format_catalog()
-            self.njy_to_abmag()
         return self.catalog
 
 
@@ -197,4 +149,3 @@ if __name__ == "__main__":
         fit_colname="segment_{}_flux",
         fit_err_colname="segment_{}_flux_err",
     )
-    print("Done.")
