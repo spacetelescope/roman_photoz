@@ -1,10 +1,11 @@
+import os
 from pathlib import Path
 
-from roman_photoz.logger import logger
-import os
 import lephare as lp
 from astropy.table import Table
+
 from roman_photoz.default_config_file import default_roman_config
+from roman_photoz.logger import logger
 
 LEPHAREDIR = os.environ.get("LEPHAREDIR", lp.LEPHAREDIR)
 LEPHAREWORK = os.environ.get(

@@ -2,10 +2,8 @@ from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
-from numpy.lib.recfunctions import merge_arrays
 
 from roman_photoz.create_simulated_catalog import SimulatedCatalog
-from roman_photoz.default_config_file import default_roman_config
 from roman_photoz.utils.roman_photoz_utils import get_roman_filter_list
 
 FILTER_LIST = get_roman_filter_list()

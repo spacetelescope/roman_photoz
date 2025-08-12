@@ -153,7 +153,7 @@ class TestRomanCatalogProcess:
         rcp.update_input = MagicMock()
 
         # Call process method
-        rcp.process(input_filename='test')
+        rcp.process(input_filename="test")
 
         # Verify create_informer_stage was called or not based on model existence
         if should_create_informer:
@@ -232,21 +232,21 @@ class TestRomanCatalogProcess:
 
             # Check both components of the path
             expected_path = os.path.join(expected_dirname, model_filename)
-            assert rcp.informer_model_path == expected_path, (
-                f"Full path does not match. Expected: {expected_path}"
-            )
+            assert (
+                rcp.informer_model_path == expected_path
+            ), f"Full path does not match. Expected: {expected_path}"
 
             # Verify the directory part matches expected_dirname
             path_dirname = os.path.dirname(rcp.informer_model_path)
-            assert path_dirname == expected_dirname, (
-                f"Directory part does not match. Expected: {expected_dirname}"
-            )
+            assert (
+                path_dirname == expected_dirname
+            ), f"Directory part does not match. Expected: {expected_dirname}"
 
             # Verify the filename part matches model_filename
             path_basename = os.path.basename(rcp.informer_model_path)
-            assert path_basename == model_filename, (
-                f"Filename part does not match. Expected: {model_filename}"
-            )
+            assert (
+                path_basename == model_filename
+            ), f"Filename part does not match. Expected: {model_filename}"
 
         finally:
             # Restore original environment variables

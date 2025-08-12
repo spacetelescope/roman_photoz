@@ -3,9 +3,10 @@
 import argparse
 import os
 from collections import OrderedDict
-from pathlib import Path
 from importlib import resources
+from pathlib import Path
 
+import astropy.units as u
 import lephare as lp
 import numpy as np
 from astropy.table import Table
@@ -15,10 +16,7 @@ from rail.core.stage import RailStage
 from roman_photoz import create_roman_filters
 from roman_photoz.default_config_file import default_roman_config
 from roman_photoz.logger import logger
-from roman_photoz.utils import save_catalog, get_roman_filter_list
-import re
-import astropy.units as u
-import math
+from roman_photoz.utils import get_roman_filter_list, save_catalog
 
 ROMAN_DEFAULT_CONFIG = default_roman_config
 
@@ -142,7 +140,7 @@ class SimulatedCatalog:
             create_roman_filters.run()
 
         logger.info(
-                f"Using filter library in {self.lephare_config['FILTER_REP']}/roman."
+            f"Using filter library in {self.lephare_config['FILTER_REP']}/roman."
         )
 
     def create_simulated_data(self):
@@ -158,12 +156,12 @@ class SimulatedCatalog:
             If the LePhare preparation fails or the configuration is invalid.
         """
 
-        fname = self.lephare_config['GAL_LIB_OUT']
-        catalog_name = Path(
-            LEPHAREWORK, "lib_mag", f"{fname}.dat"
-        ).as_posix()
+        fname = self.lephare_config["GAL_LIB_OUT"]
+        catalog_name = Path(LEPHAREWORK, "lib_mag", f"{fname}.dat").as_posix()
         if os.path.exists(catalog_name):
-            logger.info('LePhare synthetic magnitudes already exist, skipping creation.')
+            logger.info(
+                "LePhare synthetic magnitudes already exist, skipping creation."
+            )
             return
 
         star_overrides = {}
@@ -203,10 +201,8 @@ class SimulatedCatalog:
         + format the columns name to match Roman catalog's specifications
 
         """
-        fname = self.lephare_config['GAL_LIB_OUT']
-        catalog_name = Path(
-            LEPHAREWORK, "lib_mag", f"{fname}.dat"
-        ).as_posix()
+        fname = self.lephare_config["GAL_LIB_OUT"]
+        catalog_name = Path(LEPHAREWORK, "lib_mag", f"{fname}.dat").as_posix()
         colnames = self.create_header(catalog_name=catalog_name)
 
         # some columns are actually integers, e.g., model, ext_law, N_filt
@@ -214,9 +210,9 @@ class SimulatedCatalog:
         # using these to generate a romancal catalog parquet output file
         # that doesn't contain these columns anyway
         self.simulated_data = np.loadtxt(
-            catalog_name, dtype=[(n, 'f4') for n in colnames], encoding="utf-8"
+            catalog_name, dtype=[(n, "f4") for n in colnames], encoding="utf-8"
         )
-        self.simulated_data = self.simulated_data[self.simulated_data['redshift'] > 0]
+        self.simulated_data = self.simulated_data[self.simulated_data["redshift"] > 0]
 
         # we're keeping only the columns with magnitude and true redshift information
         cols_to_keep = [
@@ -271,20 +267,14 @@ class SimulatedCatalog:
         # the F158 filter so we're adding the other filters
         colnames = self.create_column_names()
 
-        # determine what filters are available in the template catalog
-        available_filters = list(
-            set(re.findall(r"f\d+", " ".join(self.roman_catalog_template.dtype.names)))
-        )
-        # use the first available filter as the default (regardless of which one it is)
-        default_filter = available_filters[0]
-
         # create an empty table to hold the simulated data for the Roman catalog
         simulated_roman_catalog = Table()
         for field in self.roman_catalog_template.dtype.names:
             simulated_roman_catalog[field] = np.zeros(
-                len(catalog), dtype=self.roman_catalog_template.dtype[field])
+                len(catalog), dtype=self.roman_catalog_template.dtype[field]
+            )
 
-        simulated_roman_catalog['label'] = catalog['label']
+        simulated_roman_catalog["label"] = catalog["label"]
 
         # then add the simulated data
         for filter_name in filter_list:
@@ -292,21 +282,21 @@ class SimulatedCatalog:
                 colname = colname.format(filter_name)
                 if "flux_err" in colname:
                     # flux error = ln(10) / 2.5 mag_error
-                    flux = self.abmag_to_njy(catalog[f'magnitude{filter_name}'])
-                    errname = f'magnitude{filter_name}_err'
+                    flux = self.abmag_to_njy(catalog[f"magnitude{filter_name}"])
+                    errname = f"magnitude{filter_name}_err"
                     if errname in catalog.dtype.names:
-                        simulated_value = (
-                            np.log(10) / 2.5 * flux * catalog[errname])
+                        simulated_value = np.log(10) / 2.5 * flux * catalog[errname]
                     else:
                         simulated_value = 0.01 * flux
                 elif "flux" in colname:
                     simulated_value = self.abmag_to_njy(
-                        catalog[f"magnitude{filter_name}"])
+                        catalog[f"magnitude{filter_name}"]
+                    )
                 else:
                     continue
                 simulated_roman_catalog[colname] = simulated_value
 
-        simulated_roman_catalog['redshift_true'] = catalog['redshift_true']
+        simulated_roman_catalog["redshift_true"] = catalog["redshift_true"]
 
         return simulated_roman_catalog
 
@@ -362,7 +352,7 @@ class SimulatedCatalog:
         """
         # don't do anything if we're not adding noise
         if mag_noise <= 0:
-            logger.info('Not adding noise to the catalog.')
+            logger.info("Not adding noise to the catalog.")
             return catalog
 
         new_dtype = []
@@ -459,7 +449,8 @@ class SimulatedCatalog:
         self.create_filter_files()
         self.create_simulated_data()
         self.create_simulated_input_catalog(
-            output_filename=output_filename, output_path=output_path,
+            output_filename=output_filename,
+            output_path=output_path,
         )
 
         logger.info("DONE")
@@ -489,8 +480,7 @@ def main():
             help="Number of objects to create.",
         )
         parser.add_argument(
-            '--mag-noise', type=float, default=0,
-            help='Add noise to the measurements.'
+            "--mag-noise", type=float, default=0, help="Add noise to the measurements."
         )
 
         return parser.parse_args()

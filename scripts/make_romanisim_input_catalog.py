@@ -1,7 +1,7 @@
-from romanisim.catalog import make_cosmos_galaxies
 from astropy.coordinates import SkyCoord
-from roman_photoz.utils import get_roman_filter_list
+from romanisim.catalog import make_cosmos_galaxies
 
+from roman_photoz.utils import get_roman_filter_list
 
 if __name__ == "__main__":
     ra_ref = 270.0  # RA in degrees

@@ -1,15 +1,11 @@
-import os
 from pathlib import Path
 
 import numpy as np
 from astropy.table import Table
-from numpy.lib import recfunctions as rfn
 from roman_datamodels import datamodels as rdm
 
 from roman_photoz.logger import logger
 from roman_photoz.utils import get_roman_filter_list
-import astropy.units as u
-import math
 
 
 class RomanCatalogHandler:
@@ -60,7 +56,7 @@ class RomanCatalogHandler:
 
         # Only add label if it's not already present
         if "label" not in self.catalog.dtype.names:
-            self.catalog['label'] = self.cat_array['label']
+            self.catalog["label"] = self.cat_array["label"]
 
         for filter_id in self.filter_names:
             # Roman filter ID in format "fNNN"
@@ -97,9 +93,9 @@ class RomanCatalogHandler:
             self.catalog[fit_err_colname][m] *= 10**-32
 
         if "redshift" not in self.cat_array.dtype.names:
-            self.catalog['redshift'] = np.zeros(len(self.catalog), dtype='f4')
+            self.catalog["redshift"] = np.zeros(len(self.catalog), dtype="f4")
         else:
-            self.catalog['redshift'] = self.cat_array['redshift']
+            self.catalog["redshift"] = self.cat_array["redshift"]
 
         logger.info("Catalog formatting completed")
 

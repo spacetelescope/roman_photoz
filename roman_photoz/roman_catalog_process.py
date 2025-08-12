@@ -2,17 +2,16 @@
 import argparse
 import json
 import os
-import sys
+import tempfile
 from collections import OrderedDict
 from pathlib import Path
 from typing import Union
-import tempfile
 
+import astropy.table
 import lephare as lp
 import numpy as np
 import pkg_resources
 from asdf import AsdfFile
-import astropy.table
 from astropy.table import Table
 from rail.core.stage import RailStage
 from rail.estimation.algos.lephare import LephareEstimator, LephareInformer
@@ -21,8 +20,6 @@ from roman_photoz.default_config_file import default_roman_config
 from roman_photoz.logger import logger
 from roman_photoz.roman_catalog_handler import RomanCatalogHandler
 from roman_photoz.utils import read_output_keys
-import argparse
-import sys
 
 DS = RailStage.data_store
 DS.__class__.allow_overwrite = True
@@ -211,9 +208,12 @@ class RomanCatalogProcess:
         else:
             model = self.inform_stage.get_handle("model")
 
-        tf = tempfile.NamedTemporaryFile(prefix='output_estimate_lephare', suffix='.hdf5', delete=True,
-                                         dir='.')
-        self.tempfile = tf  # keep in memory until this object goes out of scope, then delete?
+        tf = tempfile.NamedTemporaryFile(
+            prefix="output_estimate_lephare", suffix=".hdf5", delete=True, dir="."
+        )
+        self.tempfile = (
+            tf  # keep in memory until this object goes out of scope, then delete?
+        )
         stagename = os.path.basename(os.path.splitext(tf.name)[0])[7:]
         estimate_lephare = LephareEstimator.make_stage(
             name=stagename,
@@ -271,42 +271,42 @@ class RomanCatalogProcess:
     def update_input(self, input_filename):
         import pyarrow as pa
         import pyarrow.parquet as pq
+
         tab = pq.read_table(input_filename)
         tab_astro = Table.read(input_filename)
         meta = dict(tab.schema.metadata)
 
         namedict = {
-            'photoz': 'Z_BEST',
-            'photoz_high68': 'Z_BEST68_HIGH',
-            'photoz_high90': 'Z_BEST90_HIGH',
-            'photoz_high99': 'Z_BEST99_HIGH',
-            'photoz_low68': 'Z_BEST68_LOW',
-            'photoz_low90': 'Z_BEST90_LOW',
-            'photoz_low99': 'Z_BEST99_LOW',
-            'photoz_gof': 'CHI_BEST',
-            'photoz_sed': 'MOD_BEST',
+            "photoz": "Z_BEST",
+            "photoz_high68": "Z_BEST68_HIGH",
+            "photoz_high90": "Z_BEST90_HIGH",
+            "photoz_high99": "Z_BEST99_HIGH",
+            "photoz_low68": "Z_BEST68_LOW",
+            "photoz_low90": "Z_BEST90_LOW",
+            "photoz_low99": "Z_BEST99_LOW",
+            "photoz_gof": "CHI_BEST",
+            "photoz_sed": "MOD_BEST",
         }
         for newname, oldname in namedict.items():
             if newname not in tab.column_names:
                 tab = tab.append_column(
-                    newname, pa.array(self.estimated.data.ancil[oldname]))
+                    newname, pa.array(self.estimated.data.ancil[oldname])
+                )
             else:
                 tab = tab.set_column(
                     tab.schema.get_field_index(newname),
                     newname,
-                    pa.array(self.estimated.data.ancil[oldname]))
+                    pa.array(self.estimated.data.ancil[oldname]),
+                )
             tab_astro[newname] = self.estimated.data.ancil[oldname]
             # annoying to duplicate this, but we add to the "real"
             # parquet table and also the astropy version to get the
             # right astropy metadata
 
-        extra_astropy_metadata = astropy.table.meta.get_yaml_from_table(
-            tab_astro)
-        meta[b"table_meta_yaml"] = "\n".join(
-            extra_astropy_metadata).encode('utf-8')
+        extra_astropy_metadata = astropy.table.meta.get_yaml_from_table(tab_astro)
+        meta[b"table_meta_yaml"] = "\n".join(extra_astropy_metadata).encode("utf-8")
         tab = tab.replace_schema_metadata(meta)
         pq.write_table(tab, input_filename)
-
 
     def process(
         self,
@@ -352,7 +352,6 @@ class RomanCatalogProcess:
             )
         else:
             self.update_input(input_filename)
-
 
     @property
     def informer_model_exists(self):
@@ -415,7 +414,7 @@ def _get_parser():
     parser.add_argument(
         "--input-filename",
         type=str,
-        help=f"Input catalog filename",
+        help="Input catalog filename",
     )
     parser.add_argument(
         "--output-format",
@@ -427,7 +426,7 @@ def _get_parser():
         "--output-filename",
         type=str,
         default=None,
-        help=f"Output filename (default: None).  If None, update input filename in place.",
+        help="Output filename (default: None).  If None, update input filename in place.",
     )
     parser.add_argument(
         "--fit-colname",
