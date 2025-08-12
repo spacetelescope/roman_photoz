@@ -21,7 +21,6 @@ dependencies = [
   "pz-rail-lephare",
   "requests >=2.26",
   "roman_datamodels",
->>>>>>> RCAL-1086
 ]
 license-files = ["LICENSE"]
 dynamic = ["version"]
