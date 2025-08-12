@@ -36,7 +36,7 @@ def update_fluxes(target_catalog: Table, flux_catalog: Table) -> Table:
 
     # Add source ID from roman_simulated_catalog
     target_catalog["label"] = flux_catalog["label"]
-    target_catalog["ztrue"] = flux_catalog["ztrue"]
+    target_catalog["redshift_true"] = flux_catalog["redshift_true"]
 
     return target_catalog
 
