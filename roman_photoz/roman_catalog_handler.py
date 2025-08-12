@@ -8,6 +8,8 @@ from roman_datamodels import datamodels as rdm
 
 from roman_photoz.logger import logger
 from roman_photoz.utils import get_roman_filter_list
+import astropy.units as u
+import math
 
 
 class RomanCatalogHandler:
@@ -40,15 +42,12 @@ class RomanCatalogHandler:
         self.fit_err_colname = fit_err_colname
         self.cat_temp_filename = "cat_temp_file.csv"
         self.filter_names = get_roman_filter_list()
+        self.cat_array = None
+        self.catalog = None
 
         # Only read and format catalog if a filename is provided
         if catname:
-            self.cat_array = self.read_catalog()
-            self.catalog = np.empty(0, dtype=[])
-            self.format_catalog()
-        else:
-            self.cat_array = None
-            self.catalog = None
+            self.process()
 
     def format_catalog(self):
         """
@@ -57,13 +56,11 @@ class RomanCatalogHandler:
         logger.info("Formatting catalog...")
         # Initialize catalog if it's empty or None
         if self.catalog is None or len(self.catalog) == 0:
-            self.catalog = np.empty(len(self.cat_array), dtype=[])
+            self.catalog = Table()
 
         # Only add label if it's not already present
         if "label" not in self.catalog.dtype.names:
-            self.catalog = rfn.append_fields(
-                self.catalog, "label", self.cat_array["label"]
-            )
+            self.catalog['label'] = self.cat_array['label']
 
         for filter_id in self.filter_names:
             # Roman filter ID in format "fNNN"
@@ -80,56 +77,29 @@ class RomanCatalogHandler:
                 # equivalent to use all the passbands for all the objects.
                 # However, the code checks the error and flux values.
                 # If both values are negative, the band is not used."
-                value = np.full(len(self.cat_array), -99, dtype=int)
-                error = np.full(len(self.cat_array), -99, dtype=int)
+                value = np.full(len(self.cat_array), -99, dtype=np.float32)
+                error = np.full(len(self.cat_array), -99, dtype=np.float32)
 
             # Only add fields if they don't already exist
             if fit_colname not in self.catalog.dtype.names:
-                self.catalog = rfn.append_fields(
-                    self.catalog,
-                    fit_colname,
-                    value,
-                )
+                self.catalog[fit_colname] = value
+
             if fit_err_colname not in self.catalog.dtype.names:
-                self.catalog = rfn.append_fields(
-                    self.catalog,
-                    fit_err_colname,
-                    error,
-                )
-        # populate additional required columns only if they don't exist
-        if "context" not in self.catalog.dtype.names:
-            self.catalog = rfn.append_fields(
-                self.catalog,
-                "context",
-                (
-                    self.cat_array["context"]
-                    if "context" in self.cat_array.dtype.names
-                    else np.zeros(len(self.cat_array), dtype=int)
-                ),
-                usemask=False,
-            )
-        if "zspec" not in self.catalog.dtype.names:
-            self.catalog = rfn.append_fields(
-                self.catalog,
-                "zspec",
-                (
-                    self.cat_array["zspec"]
-                    if "zspec" in self.cat_array.dtype.names
-                    else np.zeros(len(self.cat_array), dtype=int)
-                ),
-                usemask=False,
-            )
-        if "string_data" not in self.catalog.dtype.names:
-            self.catalog = rfn.append_fields(
-                self.catalog,
-                "string_data",
-                (
-                    self.cat_array["string_data"]
-                    if "string_data" in self.cat_array.dtype.names
-                    else np.full(len(self.cat_array), "")
-                ),
-                usemask=False,
-            )
+                self.catalog[fit_err_colname] = error
+
+            # lephare expects fluxes in erg/s/cm^2/Hz
+            # we need to convert from nJy
+            # 10^-23 erg / s / ... = 1 Jy
+            # 10^-9 Jy = 1 nJy
+            # => 10^-32 erg / s / ... = 1 nJy
+            m = self.catalog[fit_err_colname] > 0
+            self.catalog[fit_colname][m] *= 10**-32
+            self.catalog[fit_err_colname][m] *= 10**-32
+
+        if "redshift" not in self.cat_array.dtype.names:
+            self.catalog['redshift'] = np.zeros(len(self.catalog), dtype='f4')
+        else:
+            self.catalog['redshift'] = self.cat_array['redshift']
 
         logger.info("Catalog formatting completed")
 
@@ -179,4 +149,3 @@ if __name__ == "__main__":
         fit_colname="segment_{}_flux",
         fit_err_colname="segment_{}_flux_err",
     )
-    print("Done.")

@@ -4,6 +4,7 @@ import argparse
 import os
 from collections import OrderedDict
 from pathlib import Path
+from importlib import resources
 
 import lephare as lp
 import numpy as np
@@ -15,6 +16,9 @@ from roman_photoz import create_roman_filters
 from roman_photoz.default_config_file import default_roman_config
 from roman_photoz.logger import logger
 from roman_photoz.utils import save_catalog, get_roman_filter_list
+import re
+import astropy.units as u
+import math
 
 ROMAN_DEFAULT_CONFIG = default_roman_config
 
@@ -39,8 +43,6 @@ class SimulatedCatalog:
         A dictionary to store the data.
     lephare_config : dict
         Configuration for LePhare.
-    nobj : int
-        Maximum number of objects to process from input catalog.
     flux_cols : list
         List of flux columns.
     flux_err_cols : list
@@ -57,20 +59,46 @@ class SimulatedCatalog:
         Placeholder for simulated data.
     """
 
-    def __init__(self, include_errors: bool = False):
+    def __init__(self, nobj: int = 1000, mag_noise: float = 0.1):
         """
         Initializes the SimulatedCatalog class.
         """
         self.data = OrderedDict()
         self.lephare_config = ROMAN_DEFAULT_CONFIG
-        self.nobj = 100
+        self.nobj = nobj
         self.flux_cols = []
         self.flux_err_cols = []
         self.inform_stage = None
         self.estimated = None
         self.simulated_data_filename = ""
+        self.filter_lib = None
         self.simulated_data = None
-        self.include_errors = include_errors
+        self.roman_catalog_template = self.read_roman_template_catalog()
+        self.filter_list = get_roman_filter_list()
+        self.mag_noise = mag_noise
+
+    def create_column_names(self):
+        colnames_list = []
+        for colname in self.roman_catalog_template.dtype.names:
+            for filter_id in self.filter_list:
+                # make sure we replace any column name that contains the filter_id
+                if filter_id in colname:
+                    colname = colname.replace(filter_id, "{}")
+                    break
+            colnames_list.append(colname)
+
+        # colnames = [x.format(y) for y in self.filter_list for x in colnames_list]
+
+        return list(
+            dict.fromkeys(colnames_list)
+        )  # remove duplicates while preserving order
+
+    def read_roman_template_catalog(self):
+        input_filename = "roman_catalog_template.parquet"
+        input_path = resources.files("roman_photoz.data").joinpath(input_filename)
+        template = Table.read(input_path, format="parquet")
+        empty_template = Table(dtype=template.dtype)
+        return empty_template
 
     def is_folder_not_empty(self, folder_path: str, partial_text: str) -> bool:
         """
@@ -114,7 +142,7 @@ class SimulatedCatalog:
             create_roman_filters.run()
 
         logger.info(
-            f"Created filter library using the filter files in {self.lephare_config['FILTER_REP']}/roman."
+                f"Using filter library in {self.lephare_config['FILTER_REP']}/roman."
         )
 
     def create_simulated_data(self):
@@ -129,11 +157,22 @@ class SimulatedCatalog:
         RuntimeError
             If the LePhare preparation fails or the configuration is invalid.
         """
+
+        fname = self.lephare_config['GAL_LIB_OUT']
+        catalog_name = Path(
+            LEPHAREWORK, "lib_mag", f"{fname}.dat"
+        ).as_posix()
+        if os.path.exists(catalog_name):
+            logger.info('LePhare synthetic magnitudes already exist, skipping creation.')
+            return
+
         star_overrides = {}
-        qso_overrides = {}
+        qso_overrides = {
+            "MOD_EXTINC": "0,1000",
+            "EB_V": "0.,0.1,0.2,0.3",
+            "EXTINC_LAW": "SB_calzetti.dat",
+        }
         gal_overrides = {
-            "GAL_LIB_IN": "LIB_CE",
-            "GAL_LIB_OUT": "ROMAN_SIMULATED_MAGS",
             "GAL_SED": f"{LEPHAREDIR}/examples/COSMOS_MOD.list",
             "LIB_ASCII": "YES",
         }
@@ -164,14 +203,20 @@ class SimulatedCatalog:
         + format the columns name to match Roman catalog's specifications
 
         """
+        fname = self.lephare_config['GAL_LIB_OUT']
         catalog_name = Path(
-            LEPHAREWORK, "lib_mag", f"{self.simulated_data_filename}.dat"
+            LEPHAREWORK, "lib_mag", f"{fname}.dat"
         ).as_posix()
         colnames = self.create_header(catalog_name=catalog_name)
 
-        self.simulated_data = np.genfromtxt(
-            catalog_name, dtype=None, names=colnames, encoding="utf-8"
+        # some columns are actually integers, e.g., model, ext_law, N_filt
+        # but treating these as floats doesn't really hurt anything; we are
+        # using these to generate a romancal catalog parquet output file
+        # that doesn't contain these columns anyway
+        self.simulated_data = np.loadtxt(
+            catalog_name, dtype=[(n, 'f4') for n in colnames], encoding="utf-8"
         )
+        self.simulated_data = self.simulated_data[self.simulated_data['redshift'] > 0]
 
         # we're keeping only the columns with magnitude and true redshift information
         cols_to_keep = [
@@ -181,27 +226,22 @@ class SimulatedCatalog:
         ]
 
         # we're matching the number of objects in the template
-        num_lines = -1  # len(self.roman_catalog_template)
+        num_lines = self.nobj
         random_lines = self.pick_random_lines(num_lines)
         catalog = random_lines[cols_to_keep]
 
-        final_catalog = self.add_error(catalog)
+        final_catalog = self.add_error(catalog, mag_noise=self.mag_noise)
         final_catalog = self.add_ids(final_catalog)
 
-        context = np.full((len(catalog)), 0)
-        # zspec = np.full((num_lines), np.nan)
-        zspec = final_catalog["redshift"]
-        string_data = final_catalog["redshift"]
+        redshift = final_catalog["redshift"]
 
         final_catalog = rfn.append_fields(
-            final_catalog, "context", context, usemask=False
-        )
-        final_catalog = rfn.append_fields(final_catalog, "zspec", zspec, usemask=False)
-        final_catalog = rfn.append_fields(
-            final_catalog, "z_true", string_data, usemask=False
+            final_catalog, "redshift_true", redshift, usemask=False
         )
         # remove the redshift column
         final_catalog = rfn.drop_fields(final_catalog, ["redshift"])
+
+        final_catalog = self.create_simulated_roman_catalog(final_catalog)
 
         final_catalog = Table(final_catalog)
 
@@ -211,6 +251,64 @@ class SimulatedCatalog:
             output_path=output_path,
             overwrite=True,
         )
+
+    def abmag_to_njy(self, abmag):
+        # convert AB magnitude to flux density in nJy
+        return (abmag * u.ABmag).to(u.nJy)
+
+    def create_simulated_roman_catalog(self, catalog):
+        """
+        Update the Roman catalog template with the simulated data.
+
+        Parameters
+        ----------
+        catalog : np.ndarray
+            The catalog data to update the Roman catalog template with.
+        """
+        filter_list = self.filter_list
+
+        # in the asdf template file we only have the flux in
+        # the F158 filter so we're adding the other filters
+        colnames = self.create_column_names()
+
+        # determine what filters are available in the template catalog
+        available_filters = list(
+            set(re.findall(r"f\d+", " ".join(self.roman_catalog_template.dtype.names)))
+        )
+        # use the first available filter as the default (regardless of which one it is)
+        default_filter = available_filters[0]
+
+        # create an empty table to hold the simulated data for the Roman catalog
+        simulated_roman_catalog = Table()
+        for field in self.roman_catalog_template.dtype.names:
+            simulated_roman_catalog[field] = np.zeros(
+                len(catalog), dtype=self.roman_catalog_template.dtype[field])
+
+        simulated_roman_catalog['label'] = catalog['label']
+
+        # then add the simulated data
+        for filter_name in filter_list:
+            for colname in colnames:
+                colname = colname.format(filter_name)
+                if "flux_err" in colname:
+                    # flux error = ln(10) / 2.5 mag_error
+                    flux = self.abmag_to_njy(catalog[f'magnitude{filter_name}'])
+                    errname = f'magnitude{filter_name}_err'
+                    if errname in catalog.dtype.names:
+                        simulated_value = (
+                            np.log(10) / 2.5 * flux * catalog[errname])
+                    else:
+                        simulated_value = 0.01 * flux
+                elif "flux" in colname:
+                    simulated_value = self.abmag_to_njy(
+                        catalog[f"magnitude{filter_name}"])
+                else:
+                    continue
+                simulated_roman_catalog[colname] = simulated_value
+
+        simulated_roman_catalog['redshift_true'] = catalog['redshift_true']
+
+        return simulated_roman_catalog
 
     def add_ids(self, catalog):
         """
@@ -240,17 +338,13 @@ class SimulatedCatalog:
 
         return new_catalog
 
-    def add_error(
-        self, catalog, mag_noise: float = 0.1, mag_err: float = 0.01, seed: int = 42
-    ):
+    def add_error(self, catalog, mag_noise: float = 0.1, seed: int = 42):
         """
         Add a Gaussian error to each magnitude column in the catalog.
 
         For each magnitude column, this method adds:
-
         + a Gaussian noise with a mean equal to the original value and a standard deviation of `mag_noise`
-
-        + an error column (`<magnitude_column>_err`) with values sampled from a Gaussian distribution with a mean of 0 and a standard deviation of `mag_err`.
+        + an error column (`<magnitude_column>_err`) with values set to `mag_noise`.
 
         Parameters
         ----------
@@ -258,8 +352,6 @@ class SimulatedCatalog:
             The catalog data.
         mag_noise : float, optional
             The standard deviation of the Gaussian noise to be added to the observed magnitudes (default: 0.1).
-        mag_err : float, optional
-            The standard deviation of the Gaussian noise to be added to the error columns (default: 0.01).
         seed : int, optional
             The seed for the random number generator.
 
@@ -268,18 +360,19 @@ class SimulatedCatalog:
         np.ndarray
             The catalog data with error columns added.
         """
-        if not self.include_errors:
-            logger.info("Skipping error addition to the simulated catalog.")
+        # don't do anything if we're not adding noise
+        if mag_noise <= 0:
+            logger.info('Not adding noise to the catalog.')
             return catalog
 
-        rng = np.random.default_rng(seed=seed)
         new_dtype = []
         for col in catalog.dtype.names:
             new_dtype.append((col, catalog[col].dtype))
             if "mag" in col:
                 new_dtype.append((f"{col}_err", catalog[col].dtype))
 
-        new_catalog = np.empty(catalog.shape, dtype=new_dtype)
+        new_catalog = np.zeros(catalog.shape, dtype=new_dtype)
+        rng = np.random.default_rng(seed=seed)
         for col in catalog.dtype.names:
             # add some noise to the magnitudes
             new_catalog[col] = rng.normal(
@@ -287,9 +380,7 @@ class SimulatedCatalog:
             )
             if "mag" in col:
                 # add error
-                new_catalog[f"{col}_err"] = np.abs(
-                    rng.normal(loc=0, scale=mag_err, size=catalog[col].shape)
-                )
+                new_catalog[f"{col}_err"] = mag_noise
 
         return new_catalog
 
@@ -307,24 +398,22 @@ class SimulatedCatalog:
         list
             The list of column names for the catalog.
         """
-        filter_list = get_roman_filter_list()
         with open(catalog_name) as f:
-            # BEWARE of the format of LAPHEREWORK/lib_mag/ROMAN_SIMULATED_MAGS.dat!
+            # BEWARE of the format of LEPHAREWORK/lib_mag/*_COSMOS.dat!
             # ignore the first N_filt lines in the file
-            # for _ in range(len(filter_list) + 1):
-            #     next(f)
+            for _ in range(len(self.filter_list) + 1):
+                next(f)
             colname_list = f.readline().strip().split(" ")
-        colnames = [x for x in colname_list if "vector" not in x]
-        colvector = [x for x in colname_list if "vector" in x]
+        colnames = [x for x in colname_list if "[N_filt]" not in x]
+        colvector = [x for x in colname_list if "[N_filt]" in x]
         expanded_colvector = [
-            x.replace("vector", filter_name)
+            x.replace("[N_filt]", filter_name)
             for x in colvector
-            for filter_name in filter_list
+            for filter_name in self.filter_list
         ]
         colnames.extend(expanded_colvector)
 
         colnames = [x for x in colnames if "#" not in x]
-        colnames = [x for x in colnames if "age" not in x]
         return colnames
 
     def pick_random_lines(self, num_lines: int):
@@ -370,8 +459,7 @@ class SimulatedCatalog:
         self.create_filter_files()
         self.create_simulated_data()
         self.create_simulated_input_catalog(
-            output_filename=output_filename,
-            output_path=output_path,
+            output_filename=output_filename, output_path=output_path,
         )
 
         logger.info("DONE")
@@ -395,20 +483,24 @@ def main():
             help="Filename for the output catalog.",
         )
         parser.add_argument(
-            "--add-error",
-            action="store_true",
-            help="Optionally add error to the simulated catalog.",
+            "--nobj",
+            type=int,
+            default=-1,
+            help="Number of objects to create.",
         )
+        parser.add_argument(
+            '--mag-noise', type=float, default=0,
+            help='Add noise to the measurements.'
+        )
+
         return parser.parse_args()
 
     args = parse_args()
 
     logger.info("Starting simulated catalog creation...")
-    rcp = SimulatedCatalog(include_errors=args.add_error)
+    rcp = SimulatedCatalog(args.nobj, mag_noise=args.mag_noise)
     rcp.process(args.output_path, args.output_filename)
     logger.info("Simulated catalog creation completed successfully")
-
-    logger.info("Done.")
 
 
 if __name__ == "__main__":

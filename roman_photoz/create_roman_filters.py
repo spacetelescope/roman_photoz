@@ -1,8 +1,10 @@
 import os
 import sys
 from pathlib import Path
+from importlib import resources
 
 import pandas as pd
+import numpy as np
 import requests
 from lephare.data_retrieval import get_auxiliary_data
 from lephare.filter import Filter  # type: ignore
@@ -16,7 +18,7 @@ DEFAULT_FILE_DATE = "20210614"
 BASE_URL = "https://roman.gsfc.nasa.gov/science/RRI/Roman_effarea_{}.xlsx"
 
 # Default filename with date
-DEFAULT_EFFAREA_FILENAME = f"roman_photoz/data/Roman_effarea_{DEFAULT_FILE_DATE}.xlsx"
+DEFAULT_EFFAREA_FILENAME = f"Roman_effarea_{DEFAULT_FILE_DATE}.xlsx"
 
 
 def download_file(url: str, dest: str):
@@ -55,7 +57,7 @@ def read_effarea_file(filename: str = "", **kwargs) -> pd.DataFrame:
         The data from the efficiency area file.
     """
     fname_path = (
-        Path(DEFAULT_EFFAREA_FILENAME).resolve()
+            resources.files("roman_photoz.data").joinpath(DEFAULT_EFFAREA_FILENAME)
         if not filename
         else Path(filename).resolve()
     )
@@ -91,6 +93,16 @@ def create_files(data: pd.DataFrame, filepath: str = "") -> None:
 
     for col in data.columns[1:]:
         output_data = data[[wave, col]]
+
+        # remove zero entries to speed computations
+        nonzero = np.flatnonzero(data[col] > 0)
+        start = np.min(nonzero)
+        stop = np.max(nonzero)
+        buf = 5
+        start = max([0, start - buf])
+        stop = min([len(data), stop + buf])
+        output_data = output_data[start:stop]
+
         # convert wavelength from um to A
         output_data.loc[:, wave] = output_data[wave] * 1e4
         filename = "roman" + "_".join(col.split(" ")).strip() + ".pb"
