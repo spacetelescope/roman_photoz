@@ -100,6 +100,7 @@ line-length = 88
 exclude = ["jdocs", ".tox", ".eggs", "build"]
 ignore = [
   "E741", # ambiguous variable name
+  "F403", # unable to detect undefined names
 ]
 extend-select = ["NPY"]
 

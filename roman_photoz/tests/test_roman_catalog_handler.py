@@ -3,7 +3,6 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 from astropy.table import Table
-import os
 
 from roman_photoz.roman_catalog_handler import RomanCatalogHandler
 
@@ -122,8 +121,10 @@ class TestRomanCatalogHandler:
             roman_catalog_handler.catalog["label"][0] == mock_catalog_data["label"][0]
         )
         assert (
-            roman_catalog_handler.catalog["redshift"][1] == mock_catalog_data["redshift"][1]
+            roman_catalog_handler.catalog["redshift"][1]
+            == mock_catalog_data["redshift"][1]
         )
+
 
 if __name__ == "__main__":
     pytest.main(["-v", "test_roman_catalog_handler.py"])

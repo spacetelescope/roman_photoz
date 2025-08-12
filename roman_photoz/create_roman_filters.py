@@ -1,10 +1,10 @@
 import os
 import sys
-from pathlib import Path
 from importlib import resources
+from pathlib import Path
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 import requests
 from lephare.data_retrieval import get_auxiliary_data
 from lephare.filter import Filter  # type: ignore
@@ -57,7 +57,7 @@ def read_effarea_file(filename: str = "", **kwargs) -> pd.DataFrame:
         The data from the efficiency area file.
     """
     fname_path = (
-            resources.files("roman_photoz.data").joinpath(DEFAULT_EFFAREA_FILENAME)
+        resources.files("roman_photoz.data").joinpath(DEFAULT_EFFAREA_FILENAME)
         if not filename
         else Path(filename).resolve()
     )
