@@ -64,7 +64,7 @@ def test_roman_photoz(tmp_path, dms_logger):
     err = mad_std(output["photoz"] - output["redshift_true"])
     dms_logger.info(
         f"""DMS398 MSG: roman-photoz successfully produced output file
-        containing photometric redshifts with a MAD std <= {err_upper_limit:.3f}? 
+        containing photometric redshifts with a MAD std <= {err_upper_limit:.3f}?
         {err < err_upper_limit} (actual value: {err:.3f})"""
     )
     assert err < err_upper_limit

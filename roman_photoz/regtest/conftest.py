@@ -17,11 +17,13 @@ def dms_logger():
     # Don't propagate to root logger to avoid double reporting
     # during stpipe API calls (like Step.call).
     logger.propagate = False
-    if not logger.hasHandlers():
-        handler = logging.StreamHandler(sys.stdout)
-        handler.setFormatter(
-            logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-        )
-        logger.addHandler(handler)
+    if logger.hasHandlers():
+        logger.handlers.clear()
+
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setFormatter(
+        logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    )
+    logger.addHandler(handler)
     logger.setLevel(logging.INFO)
     return logger
