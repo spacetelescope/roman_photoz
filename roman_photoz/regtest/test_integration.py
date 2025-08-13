@@ -1,36 +1,22 @@
 """Example test demonstrating usage of the bigdata test framework."""
 
+from importlib.resources import files
 from pathlib import Path
 
 import numpy as np
 import pytest
-from astropy.table import Table
-
-try:
-    from importlib.resources import files
-except ImportError:
-    # Fallback for Python < 3.9
-    from importlib_resources import files
-
 from astropy.stats import mad_std
+from astropy.table import Table
 
 from roman_photoz import create_simulated_catalog
 from roman_photoz.default_config_file import default_roman_config
 from roman_photoz.roman_catalog_process import RomanCatalogProcess
 
 # file containing the default output keys that the output file should have
-try:
-    # Modern approach using importlib.resources
-    DEFAULT_OUTPUT_KEYWORDS = str(
-        files("roman_photoz").joinpath("data/default_roman_output.para")
-    )
-except (ImportError, AttributeError):
-    # Fallback for older Python versions or if importlib_resources not available
-    import pkg_resources
-
-    DEFAULT_OUTPUT_KEYWORDS = pkg_resources.resource_filename(
-        "roman_photoz", "data/default_roman_output.para"
-    )
+# Modern approach using importlib.resources
+DEFAULT_OUTPUT_KEYWORDS = str(
+    files("roman_photoz").joinpath("data/default_roman_output.para")
+)
 
 
 @pytest.fixture
@@ -40,7 +26,7 @@ def roman_catalog_process():
 
 
 @pytest.mark.bigdata
-def test_roman_photoz(tmp_path):
+def test_roman_photoz(tmp_path, dms_logger):
     # create catalog
     sc = create_simulated_catalog.SimulatedCatalog(nobj=10000, mag_noise=0.02)
     sc.process(tmp_path, "cat.parquet")
@@ -73,5 +59,13 @@ def test_roman_photoz(tmp_path):
     for col in expected_cols:
         assert col in output.columns
         assert np.any(output[col] != 0)
+
     # make sure the redshifts aren't crazy.
-    assert mad_std(output["photoz"] - output["redshift_true"]) < 0.1
+    err_upper_limit = 0.1
+    err = mad_std(output["photoz"] - output["redshift_true"])
+    dms_logger.info(
+        f"""DMS398 MSG: roman-photoz successfully produced output file
+        containing photometric redshifts with a MAD std of {err:.3f}."""
+        f" {err < err_upper_limit}"
+    )
+    assert err < err_upper_limit
