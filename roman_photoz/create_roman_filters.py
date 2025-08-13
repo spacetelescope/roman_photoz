@@ -2,6 +2,7 @@ import os
 import sys
 from importlib import resources
 from pathlib import Path
+import argparse
 
 import numpy as np
 import pandas as pd
@@ -227,16 +228,19 @@ def run(input_filename: str = "", input_path: str = ""):
 
 
 if __name__ == "__main__":
-    # this module takes a filename as input containing
-    # the monochromatic effective area of each filter per column
-    # and creates one file for each filter as well as
-    # the final merged file expected by rail+lephare
+    parser = argparse.ArgumentParser(
+        description="Process a file containing the monochromatic effective area of each filter per column and create output files for each filter as well as the merged file for rail+lephare."
+    )
+    parser.add_argument(
+        "input_path",
+        help="Path where the results will be saved."
+    )
+    parser.add_argument(
+        "input_filename",
+        help="Filename containing the monochromatic effective area data."
+    )
+    args = parser.parse_args()
 
-    # get path where the results will be saved to
-    input_path = sys.argv[1] if len(sys.argv) > 1 else ""
-    # get effective area filename
-    input_filename = sys.argv[2] if len(sys.argv) > 2 else ""
-
-    run(input_filename=input_filename, input_path=input_path)
+    run(input_filename=args.input_filename, input_path=args.input_path)
 
     logger.info("Done.")
