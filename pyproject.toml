@@ -130,4 +130,3 @@ output = "coverage.xml"
 [project.scripts]
 roman-photoz = "roman_photoz.__main__:main"
 roman-photoz-create-simulated-catalog = "roman_photoz.create_simulated_catalog:main"
-roman-photoz-create-simulated-catalog-old = "roman_photoz.create_simulated_catalog_old:main"
