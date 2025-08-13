@@ -16,6 +16,7 @@ from astropy.table import Table
 from rail.core.stage import RailStage
 from rail.estimation.algos.lephare import LephareEstimator, LephareInformer
 
+from roman_photoz import create_simulated_catalog
 from roman_photoz.default_config_file import default_roman_config
 from roman_photoz.logger import logger
 from roman_photoz.roman_catalog_handler import RomanCatalogHandler
@@ -26,6 +27,10 @@ DS.__class__.allow_overwrite = True
 
 LEPHAREDIR = Path(os.environ.get("LEPHAREDIR", lp.LEPHAREDIR))
 LEPHAREWORK = os.environ.get("LEPHAREWORK", (LEPHAREDIR / "work").as_posix())
+CWD = Path.cwd().as_posix()
+DEFAULT_OUTPUT_CATALOG_FILENAME = (
+    create_simulated_catalog.DEFAULT_OUTPUT_CATALOG_FILENAME
+)
 
 # default paths and filenames
 DEFAULT_OUTPUT_KEYWORDS = Path(
@@ -450,6 +455,23 @@ def main():
 
     parser = _get_parser()
     args = parser.parse_args()
+
+    if args.input_filename is None:
+        logger.info(
+            "Input filename not provided; creating a simulated multiband Roman catalog..."
+        )
+        # call roman_create_simulated_catalog
+        args.input_filename = Path(CWD, DEFAULT_OUTPUT_CATALOG_FILENAME).as_posix()
+        create_simulated_catalog.main(
+            [
+                "--output-path",
+                CWD,
+                "--output-filename",
+                DEFAULT_OUTPUT_CATALOG_FILENAME,
+                "--nobj",
+                "1000",
+            ]
+        )
 
     logger.info("Starting Roman catalog processing")
     rcp = RomanCatalogProcess(
