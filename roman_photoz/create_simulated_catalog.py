@@ -456,37 +456,37 @@ class SimulatedCatalog:
         logger.info("DONE")
 
 
-def main():
-    def parse_args():
-        parser = argparse.ArgumentParser(
-            description="Create a simulated catalog using the Roman telescope data."
-        )
-        parser.add_argument(
-            "--output-path",
-            type=str,
-            default=LEPHAREWORK,
-            help="Path to save the output catalog.",
-        )
-        parser.add_argument(
-            "--output-filename",
-            type=str,
-            default=DEFAULT_OUTPUT_CATALOG_FILENAME,
-            help="Filename for the output catalog.",
-        )
-        parser.add_argument(
-            "--nobj",
-            type=int,
-            default=-1,
-            help="Number of objects to create.",
-        )
-        parser.add_argument(
-            "--mag-noise", type=float, default=0, help="Add noise to the measurements."
-        )
+def parse_args(args=None):
+    parser = argparse.ArgumentParser(
+        description="Create a simulated catalog using the Roman telescope data."
+    )
+    parser.add_argument(
+        "--output-path",
+        type=str,
+        default=LEPHAREWORK,
+        help="Path to save the output catalog.",
+    )
+    parser.add_argument(
+        "--output-filename",
+        type=str,
+        default=DEFAULT_OUTPUT_CATALOG_FILENAME,
+        help="Filename for the output catalog.",
+    )
+    parser.add_argument(
+        "--nobj",
+        type=int,
+        default=-1,
+        help="Number of objects to create.",
+    )
+    parser.add_argument(
+        "--mag-noise", type=float, default=0, help="Add noise to the measurements."
+    )
 
-        return parser.parse_args()
+    return parser.parse_args(args)
 
-    args = parse_args()
 
+def main(args=None):
+    args = parse_args(args)
     logger.info("Starting simulated catalog creation...")
     rcp = SimulatedCatalog(args.nobj, mag_noise=args.mag_noise)
     rcp.process(args.output_path, args.output_filename)
