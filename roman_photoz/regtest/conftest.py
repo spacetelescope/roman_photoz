@@ -1,5 +1,5 @@
 import logging
-from os import sys
+import sys
 
 import pytest
 from romancal.regtest.conftest import *
@@ -17,10 +17,11 @@ def dms_logger():
     # Don't propagate to root logger to avoid double reporting
     # during stpipe API calls (like Step.call).
     logger.propagate = False
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(
-        logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-    )
-    logger.addHandler(handler)
+    if not logger.hasHandlers():
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setFormatter(
+            logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        )
+        logger.addHandler(handler)
     logger.setLevel(logging.INFO)
     return logger
