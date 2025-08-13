@@ -25,7 +25,6 @@ def roman_catalog_process():
     return RomanCatalogProcess(config_filename=default_roman_config)
 
 
-@pytest.mark.bigdata
 def test_roman_photoz(tmp_path, dms_logger):
     # create catalog
     sc = create_simulated_catalog.SimulatedCatalog(nobj=10000, mag_noise=0.02)
