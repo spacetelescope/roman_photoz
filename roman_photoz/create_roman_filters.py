@@ -1,8 +1,7 @@
+import argparse
 import os
-import sys
 from importlib import resources
 from pathlib import Path
-import argparse
 
 import numpy as np
 import pandas as pd
@@ -231,13 +230,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Process a file containing the monochromatic effective area of each filter per column and create output files for each filter as well as the merged file for rail+lephare."
     )
-    parser.add_argument(
-        "input_path",
-        help="Path where the results will be saved."
-    )
+    parser.add_argument("input_path", help="Path where the results will be saved.")
     parser.add_argument(
         "input_filename",
-        help="Filename containing the monochromatic effective area data."
+        help="Filename containing the monochromatic effective area data.",
     )
     args = parser.parse_args()
 
