@@ -39,8 +39,7 @@ def update_fluxes(target_catalog: Table, flux_catalog: Table) -> Table:
             continue
         fluxname = f"segment_{colname.lower()}_flux"
         # convert from nJy (Roman  to maggies (romanisim_input_catalog)
-        target_catalog[colname] = (
-            njy_to_mgy(flux_catalog[fluxname]) * fudge_factor)
+        target_catalog[colname] = njy_to_mgy(flux_catalog[fluxname]) * fudge_factor
 
     # Add source ID from roman_simulated_catalog
     target_catalog["label"] = flux_catalog["label"]
