@@ -31,8 +31,8 @@ def update_fluxes(target_catalog: Table, flux_catalog: Table) -> Table:
             "F087",
             "F106",
             "F129",
-            "F154",
-            "F187",
+            "F158",
+            "F184",
             "F213",
             "F146",
         ]:
@@ -112,7 +112,7 @@ if __name__ == "__main__":
     # ugly here that we have a lot of different kinds of magnitudes now
     minmag = np.min(
         [
-            -2.5 * np.log10(rpz_cat[x])
+            -2.5 * np.log10(njy_to_mgy(rpz_cat[x]).value)
             for x in rpz_cat.dtype.names
             if x.endswith("_flux") and x.startswith("segment")
         ],
