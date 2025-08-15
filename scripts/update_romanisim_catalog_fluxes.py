@@ -31,8 +31,8 @@ def update_fluxes(target_catalog: Table, flux_catalog: Table) -> Table:
             "F087",
             "F106",
             "F129",
-            "F154",
-            "F187",
+            "F158",
+            "F184",
             "F213",
             "F146",
         ]:
