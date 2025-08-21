@@ -2,7 +2,7 @@
 Usage
 =====
 
-To use ``roman_photoz``, follow the workflows below.
+There are a few ways to run ``roman_photoz``:
 
 1. Interactive (Python) Mode
 ----------------------------
@@ -17,17 +17,11 @@ To use ``roman_photoz``, follow the workflows below.
    )
 
    rcp.process(
-       input_filename="roman_simulated_catalog.parquet",
+       input_filename="./roman_photoz/data/roman_catalog_template.parquet",
        output_filename="output_filename.parquet",
        fit_colname="segment_{}_flux",  # name of the column with flux values
        fit_err_colname="segment_{}_flux_err",  # name of the column with flux errors
    )
-
-   # Example visualization
-   import matplotlib.pyplot as plt
-   import numpy as np
-   zgrid = np.linspace(0, 7, 200)
-   plt.plot(zgrid, rcp.estimated.data.pdf(zgrid)[0])
 
 2. Non-interactive (Script) Mode
 --------------------------------
@@ -37,11 +31,11 @@ To use ``roman_photoz``, follow the workflows below.
    from roman_photoz import roman_catalog_process
 
    argv = [
-       "--model_filename", "custom_model.pkl",
-       "--input_filename", "roman_simulated_catalog.parquet",
-       "--output_filename", "output_filename.asdf",
-       "--fit_colname", "segment_{}_flux",  # name of the column with flux values
-       "--fit_err_colname", "segment_{}_flux_err",  # name of the column with flux errors
+       "--model-filename", "custom_model.pkl",
+       "--input-filename", "./roman_photoz/data/roman_catalog_template.parquet",
+       "--output-filename", "output_filename.parquet",
+       "--fit-colname", "segment_{}_flux",  # name of the column with flux values
+       "--fit-err-colname", "segment_{}_flux_err",  # name of the column with flux errors
    ]
    roman_catalog_process.main(argv)
 
@@ -51,10 +45,10 @@ To use ``roman_photoz``, follow the workflows below.
 .. code-block:: bash
 
    python -m roman_photoz \
-     --model_filename=custom_model.pkl \
-     --input_filename=roman_simulated_catalog.asdf \
-     --output_filename=output_filename.asdf \
-     --fit_colname=segment_{}_flux \
-     --fit_err_colname=segment_{}_flux_err
+     --model-filename=custom_model.pkl \
+     --input-filename=./roman_photoz/data/roman_catalog_template.parquet \
+     --output-filename=output_filename.parquet \
+     --fit-colname=segment_{}_flux \
+     --fit-err-colname=segment_{}_flux_err
 
 See module docs for additional options and examples.
