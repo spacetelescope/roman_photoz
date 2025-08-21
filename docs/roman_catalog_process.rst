@@ -2,7 +2,8 @@
 Roman Catalog Process
 =====================
 
-This module provides functionality for processing catalog data related to the Roman Space Telescope.
+This module provides functionality for processing catalog data related to the
+Roman Space Telescope.
 
 Module API
 ----------
@@ -15,11 +16,11 @@ Module API
 Examples
 --------
 
-Basic usage::
+.. code-block:: python
 
-    from roman_photoz.roman_catalog_process import process_catalog
+   from roman_photoz.roman_catalog_process import process_catalog
 
-    process_catalog('input_catalog.fits', 'processed_catalog.fits')
+   process_catalog('input_catalog.fits', 'processed_catalog.fits')
 
 Notes
 -----

@@ -2,69 +2,59 @@
 Usage
 =====
 
-To use `roman_photoz`, follow these steps:
+To use ``roman_photoz``, follow the workflows below.
 
+1. Interactive (Python) Mode
+----------------------------
 
-1. Interactive mode:
+.. code-block:: python
 
-    .. code-block:: python
+   from roman_photoz.roman_catalog_process import RomanCatalogProcess
 
-        import matplotlib.pyplot as plt
-        import numpy as np
-        from roman_photoz.roman_catalog_process import RomanCatalogProcess
+   rcp = RomanCatalogProcess(
+       config_filename="",  # use default config
+       model_filename="custom_model.pkl"
+   )
 
-        # create a RomanCatalogProcess object with default configuration
-        # and custom model filename
-        rcp = RomanCatalogProcess(
-            config_filename="",  # use default config
-            model_filename="custom_model.pkl"  # specify custom model filename
-        )
+   rcp.process(
+       input_filename="roman_simulated_catalog.parquet",
+       output_filename="output_filename.parquet",
+       fit_colname="segment_{}_flux",  # name of the column with flux values
+       fit_err_colname="segment_{}_flux_err",  # name of the column with flux errors
+   )
 
-        # process the catalog
-        rcp.process(
-            input_path="/path/to/input/file/",
-            input_filename="roman_simulated_catalog.asdf",
-            output_path="/path/to/output/file/",
-            output_filename="output_filename.asdf",
-            save_results=True,
-        )
+   # Example visualization
+   import matplotlib.pyplot as plt
+   import numpy as np
+   zgrid = np.linspace(0, 7, 200)
+   plt.plot(zgrid, rcp.estimated.data.pdf(zgrid)[0])
 
-        # examples of visualization
-        # plot the estimated PDF for the first object
-        zgrid = np.linspace(0, 7, 200)
-        plt.plot(zgrid, np.squeeze(rcp.estimated.data.pdf(zgrid)[0]))
+2. Non-interactive (Script) Mode
+--------------------------------
 
-        # plot the estimated redshift ("Z_BEST") vs. the actual redshift ("ZSPEC")
-        plt.plot(rcp.estimated.data.ancil["ZSPEC"], rcp.estimated.data.ancil["Z_BEST"], "o")
+.. code-block:: python
 
-        # plot the redshift vs. the simulated magnitude in all filters
-        plt.plot(rcp.estimated.data.ancil["ZSPEC"], rcp.estimated.data.ancil["MAG_OBS()"], "o")
+   from roman_photoz import roman_catalog_process
 
-2. Non-interactive mode:
+   argv = [
+       "--model_filename", "custom_model.pkl",
+       "--input_filename", "roman_simulated_catalog.parquet",
+       "--output_filename", "output_filename.asdf",
+       "--fit_colname", "segment_{}_flux",  # name of the column with flux values
+       "--fit_err_colname", "segment_{}_flux_err",  # name of the column with flux errors
+   ]
+   roman_catalog_process.main(argv)
 
-    .. code-block:: python
+3. Command-Line Mode
+--------------------
 
-        from roman_photoz import roman_catalog_process
+.. code-block:: bash
 
-        argv = [
-            "--model_filename",
-            "custom_model.pkl",
-            "--input_path",
-            "/path/to/input/file/",
-            "--input_filename",
-            "roman_simulated_catalog.asdf",
-            "--output_path",
-            "/path/to/output/file/",
-            "--output_filename",
-            "output_filename.asdf",
-            "--save_results",
-            "True",
-        ]
+   python -m roman_photoz \
+     --model_filename=custom_model.pkl \
+     --input_filename=roman_simulated_catalog.asdf \
+     --output_filename=output_filename.asdf \
+     --fit_colname=segment_{}_flux \
+     --fit_err_colname=segment_{}_flux_err
 
-        roman_catalog_process.main(argv)
-
-3. Command line mode:
-
-    .. code-block:: bash
-
-        python -m roman_photoz --model_filename=custom_model.pkl --input_path=/path/to/input/file/ --input_filename=roman_simulated_catalog.asdf --output_path=/path/to/output/file/ --output_filename=output_filename.asdf --save_results=True
+See module docs for additional options and examples.
