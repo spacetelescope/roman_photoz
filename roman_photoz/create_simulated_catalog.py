@@ -42,9 +42,9 @@ class SimulatedCatalog:
     lephare_config : dict
         Configuration for LePhare.
     flux_cols : list
-        List of flux columns.
+        List of flux column names.
     flux_err_cols : list
-        List of flux error columns.
+        List of flux error column names.
     inform_stage : None
         Placeholder for inform stage.
     estimated : None
@@ -71,13 +71,13 @@ class SimulatedCatalog:
         self.simulated_data_filename = ""
         self.filter_lib = None
         self.simulated_data = None
-        self.roman_catalog_template = self.read_roman_template_catalog()
+        self._roman_catalog_template = self._read_roman_template_catalog()
         self.filter_list = get_roman_filter_list()
         self.mag_noise = mag_noise
 
-    def create_column_names(self):
+    def _create_column_names(self):
         colnames_list = []
-        for colname in self.roman_catalog_template.dtype.names:
+        for colname in self._roman_catalog_template.dtype.names:
             for filter_id in self.filter_list:
                 # make sure we replace any column name that contains the filter_id
                 if filter_id in colname:
@@ -85,20 +85,18 @@ class SimulatedCatalog:
                     break
             colnames_list.append(colname)
 
-        # colnames = [x.format(y) for y in self.filter_list for x in colnames_list]
-
         return list(
             dict.fromkeys(colnames_list)
         )  # remove duplicates while preserving order
 
-    def read_roman_template_catalog(self):
+    def _read_roman_template_catalog(self):
         input_filename = "roman_catalog_template.parquet"
         input_path = resources.files("roman_photoz.data").joinpath(input_filename)
         template = Table.read(input_path, format="parquet")
         empty_template = Table(dtype=template.dtype)
         return empty_template
 
-    def is_folder_not_empty(self, folder_path: str, partial_text: str) -> bool:
+    def _is_folder_not_empty(self, folder_path: str, partial_text: str) -> bool:
         """
         Check if a folder exists and contains files with the specified partial text.
 
@@ -120,7 +118,7 @@ class SimulatedCatalog:
                 return True
         return False
 
-    def create_filter_files(self):
+    def _create_filter_files(self):
         """
         Create filter files for the Roman telescope.
 
@@ -132,7 +130,7 @@ class SimulatedCatalog:
         FileNotFoundError
             If the filter files cannot be created or found.
         """
-        filter_files_present = self.is_folder_not_empty(
+        filter_files_present = self._is_folder_not_empty(
             Path(self.lephare_config["FILTER_REP"], "roman"), "roman_"
         )
         if not filter_files_present:
@@ -143,7 +141,7 @@ class SimulatedCatalog:
             f"Using filter library in {self.lephare_config['FILTER_REP']}/roman."
         )
 
-    def create_simulated_data(self):
+    def _create_simulated_data(self):
         """
         Generate simulated data using the LePhare configuration.
 
@@ -186,7 +184,7 @@ class SimulatedCatalog:
         self.simulated_data_filename = gal_overrides.get("GAL_LIB_OUT")
         logger.info("Simulated data generated successfully")
 
-    def create_simulated_input_catalog(
+    def _create_simulated_input_catalog(
         self,
         output_filename: str = DEFAULT_OUTPUT_CATALOG_FILENAME,
         output_path: str = "",
@@ -195,7 +193,7 @@ class SimulatedCatalog:
         Create a simulated input catalog from the simulated data.
 
         + read the ROMAN_SIMULATED_MAGS.dat produced by LePhare's
-            `prepare` method in `create_simulated_input_catalog`. The
+            `prepare` method in `_create_simulated_input_catalog`. The
             columns name are defined by LePhare.
 
         + format the columns name to match Roman catalog's specifications
@@ -203,7 +201,7 @@ class SimulatedCatalog:
         """
         fname = self.lephare_config["GAL_LIB_OUT"]
         catalog_name = Path(LEPHAREWORK, "lib_mag", f"{fname}.dat").as_posix()
-        colnames = self.create_header(catalog_name=catalog_name)
+        colnames = self._create_header(catalog_name=catalog_name)
 
         # some columns are actually integers, e.g., model, ext_law, N_filt
         # but treating these as floats doesn't really hurt anything; we are
@@ -223,11 +221,11 @@ class SimulatedCatalog:
 
         # we're matching the number of objects in the template
         num_lines = self.nobj
-        random_lines = self.pick_random_lines(num_lines)
+        random_lines = self._pick_random_lines(num_lines)
         catalog = random_lines[cols_to_keep]
 
-        final_catalog = self.add_error(catalog, mag_noise=self.mag_noise)
-        final_catalog = self.add_ids(final_catalog)
+        final_catalog = self._add_error(catalog, mag_noise=self.mag_noise)
+        final_catalog = self._add_ids(final_catalog)
 
         redshift = final_catalog["redshift"]
 
@@ -237,7 +235,7 @@ class SimulatedCatalog:
         # remove the redshift column
         final_catalog = rfn.drop_fields(final_catalog, ["redshift"])
 
-        final_catalog = self.create_simulated_roman_catalog(final_catalog)
+        final_catalog = self._create_simulated_roman_catalog(final_catalog)
 
         final_catalog = Table(final_catalog)
 
@@ -248,11 +246,11 @@ class SimulatedCatalog:
             overwrite=True,
         )
 
-    def abmag_to_njy(self, abmag):
+    def _abmag_to_njy(self, abmag):
         # convert AB magnitude to flux density in nJy
         return (abmag * u.ABmag).to(u.nJy)
 
-    def create_simulated_roman_catalog(self, catalog):
+    def _create_simulated_roman_catalog(self, catalog):
         """
         Update the Roman catalog template with the simulated data.
 
@@ -265,13 +263,13 @@ class SimulatedCatalog:
 
         # in the asdf template file we only have the flux in
         # the F158 filter so we're adding the other filters
-        colnames = self.create_column_names()
+        colnames = self._create_column_names()
 
         # create an empty table to hold the simulated data for the Roman catalog
         simulated_roman_catalog = Table()
-        for field in self.roman_catalog_template.dtype.names:
+        for field in self._roman_catalog_template.dtype.names:
             simulated_roman_catalog[field] = np.zeros(
-                len(catalog), dtype=self.roman_catalog_template.dtype[field]
+                len(catalog), dtype=self._roman_catalog_template.dtype[field]
             )
 
         simulated_roman_catalog["label"] = catalog["label"]
@@ -282,14 +280,14 @@ class SimulatedCatalog:
                 colname = colname.format(filter_name)
                 if "flux_err" in colname:
                     # flux error = ln(10) / 2.5 mag_error
-                    flux = self.abmag_to_njy(catalog[f"magnitude{filter_name}"])
+                    flux = self._abmag_to_njy(catalog[f"magnitude{filter_name}"])
                     errname = f"magnitude{filter_name}_err"
                     if errname in catalog.dtype.names:
                         simulated_value = np.log(10) / 2.5 * flux * catalog[errname]
                     else:
                         simulated_value = 0.01 * flux
                 elif "flux" in colname:
-                    simulated_value = self.abmag_to_njy(
+                    simulated_value = self._abmag_to_njy(
                         catalog[f"magnitude{filter_name}"]
                     )
                 else:
@@ -300,7 +298,7 @@ class SimulatedCatalog:
 
         return simulated_roman_catalog
 
-    def add_ids(self, catalog):
+    def _add_ids(self, catalog):
         """
         Add an ID column to the catalog.
 
@@ -328,7 +326,7 @@ class SimulatedCatalog:
 
         return new_catalog
 
-    def add_error(self, catalog, mag_noise: float = 0.1, seed: int = 42):
+    def _add_error(self, catalog, mag_noise: float = 0.1, seed: int = 42):
         """
         Add a Gaussian error to each magnitude column in the catalog.
 
@@ -374,7 +372,7 @@ class SimulatedCatalog:
 
         return new_catalog
 
-    def create_header(self, catalog_name: str):
+    def _create_header(self, catalog_name: str):
         """
         Create the header for the catalog.
 
@@ -406,7 +404,7 @@ class SimulatedCatalog:
         colnames = [x for x in colnames if "#" not in x]
         return colnames
 
-    def pick_random_lines(self, num_lines: int):
+    def _pick_random_lines(self, num_lines: int):
         """
         Pick random lines from the data array.
 
@@ -446,9 +444,9 @@ class SimulatedCatalog:
         """
         Run the process to create the simulated catalog.
         """
-        self.create_filter_files()
-        self.create_simulated_data()
-        self.create_simulated_input_catalog(
+        self._create_filter_files()
+        self._create_simulated_data()
+        self._create_simulated_input_catalog(
             output_filename=output_filename,
             output_path=output_path,
         )
@@ -488,8 +486,8 @@ def main():
     args = parse_args()
 
     logger.info("Starting simulated catalog creation...")
-    rcp = SimulatedCatalog(args.nobj, mag_noise=args.mag_noise)
-    rcp.process(args.output_path, args.output_filename)
+    simulated_catalog = SimulatedCatalog(args.nobj, mag_noise=args.mag_noise)
+    simulated_catalog.process(args.output_path, args.output_filename)
     logger.info("Simulated catalog creation completed successfully")
 
 

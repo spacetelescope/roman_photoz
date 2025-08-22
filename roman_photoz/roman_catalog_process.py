@@ -5,12 +5,12 @@ import os
 import tempfile
 from collections import OrderedDict
 from pathlib import Path
-from typing import Union
+from typing import Union, Optional
 
 import astropy.table
 import lephare as lp
 import numpy as np
-import pkg_resources
+from importlib.resources import files
 from asdf import AsdfFile
 from astropy.table import Table
 from rail.core.stage import RailStage
@@ -29,28 +29,28 @@ LEPHAREWORK = os.environ.get("LEPHAREWORK", (LEPHAREDIR / "work").as_posix())
 
 # default paths and filenames
 DEFAULT_OUTPUT_KEYWORDS = Path(
-    pkg_resources.resource_filename(__name__, "data/default_roman_output.para")
+    files(__name__) / "data/default_roman_output.para"
 ).as_posix()
 
 
 class RomanCatalogProcess:
     """
-    A class to process Roman catalog data using rail and lephare.
+    A class to process a Roman Telescope multiband catalog data using rail and lephare.
 
     Attributes
     ----------
     data : dict
         Dictionary to store the processed data.
     flux_cols : list
-        List of flux columns.
+        List of flux column names.
     flux_err_cols : list
-        List of flux error columns.
+        List of flux error column names.
     inform_stage : RailStage
         Informer stage for creating the library of SEDs.
     estimated : RailStage
         Estimator stage for finding the best fits from the library.
     model_filename : str
-        Name of the pickle model file.
+        Name of the pickle model file to use.
     """
 
     def __init__(
@@ -70,7 +70,7 @@ class RomanCatalogProcess:
         """
         self.data: dict = OrderedDict()
         # set configuration file (roman will have its own)
-        self.set_config_file(config_filename)
+        self._set_config_file(config_filename)
         # set model filename
         self.model_filename = model_filename
         # set attributes used for determining the redshift
@@ -80,7 +80,7 @@ class RomanCatalogProcess:
         self.estimated = None
         self.default_roman_output_keys = read_output_keys(DEFAULT_OUTPUT_KEYWORDS)
 
-    def set_config_file(self, config_filename: Union[dict, str] = ""):
+    def _set_config_file(self, config_filename: Union[dict, str] = ""):
         """
         Set the configuration file.
 
@@ -101,7 +101,7 @@ class RomanCatalogProcess:
             # a config was provided in dict format
             self.config = config_filename
 
-    def get_data(
+    def _get_data(
         self,
         input_filename,
         fit_colname: str = "segment_{}_flux",
@@ -139,7 +139,7 @@ class RomanCatalogProcess:
         # Convert numpy structured array to astropy Table for RAIL compatibility
         return Table(handler.catalog)
 
-    def create_informer_stage(self):
+    def _create_informer_stage(self):
         """
         Create the informer stage to generate the library of SEDs with various parameters.
         """
@@ -192,7 +192,7 @@ class RomanCatalogProcess:
         )
         self.inform_stage.inform(self.data)
 
-    def create_estimator_stage(self):
+    def _create_estimator_stage(self):
         """
         Create the estimator stage to find the best fits from the library.
         """
@@ -232,9 +232,9 @@ class RomanCatalogProcess:
         # dh = estimate_lephare.add_data('input', self.data)
         self.estimated = estimate_lephare.estimate(self.data)
 
-    def save_results(
+    def _save_results(
         self,
-        output_filename: str = None,
+        output_filename: Optional[str] = None,
         output_format: str = "parquet",
     ):
         """
@@ -268,7 +268,9 @@ class RomanCatalogProcess:
                 af.write_to(output_filename)
         logger.info(f"Results saved to {output_filename}.")
 
-    def update_input(self, input_filename):
+    def _update_input(self, input_filename):
+        # TODO: this can be done with the Table class
+        # directly; no need for pyarrow
         import pyarrow as pa
         import pyarrow.parquet as pq
 
@@ -311,7 +313,7 @@ class RomanCatalogProcess:
     def process(
         self,
         input_filename,
-        output_filename: str = None,
+        output_filename: Optional[str] = None,
         output_format: str = "parquet",
         fit_colname: str = "segment_{}_flux",
         fit_err_colname: str = "segment_{}_flux_err",
@@ -332,7 +334,7 @@ class RomanCatalogProcess:
             The type of flux to use for fitting.
             Options are "psf" (default), "kron", "segment", or "aperture."
         """
-        self.data = self.get_data(
+        self.data = self._get_data(
             input_filename=input_filename,
             fit_colname=fit_colname,
             fit_err_colname=fit_err_colname,
@@ -342,16 +344,16 @@ class RomanCatalogProcess:
             print(
                 "Warning: The informer model file does not exist. Creating a new one..."
             )
-            self.create_informer_stage()
-        self.create_estimator_stage()
+            self._create_informer_stage()
+        self._create_estimator_stage()
 
         if output_filename is not None:
-            self.save_results(
+            self._save_results(
                 output_filename=output_filename,
                 output_format=output_format,
             )
         else:
-            self.update_input(input_filename)
+            self._update_input(input_filename)
 
     @property
     def informer_model_exists(self):
@@ -373,7 +375,7 @@ class RomanCatalogProcess:
     @property
     def informer_model_path(self):
         """
-        Get the path to the informer model file.
+        Get the path to the informer model file used.
 
         The path is determined by checking the INFORMER_MODEL_PATH environment variable first,
         falling back to LEPHAREWORK if not set.
