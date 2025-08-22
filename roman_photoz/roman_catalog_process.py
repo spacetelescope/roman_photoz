@@ -28,9 +28,9 @@ LEPHAREDIR = Path(os.environ.get("LEPHAREDIR", lp.LEPHAREDIR))
 LEPHAREWORK = os.environ.get("LEPHAREWORK", (LEPHAREDIR / "work").as_posix())
 
 # default paths and filenames
-DEFAULT_OUTPUT_KEYWORDS = Path(
-    files(__name__) / "data/default_roman_output.para"
-).as_posix()
+DEFAULT_OUTPUT_KEYWORDS = str(
+    files(__package__ + ".data") / "default_roman_output.para"
+)
 
 
 class RomanCatalogProcess:
