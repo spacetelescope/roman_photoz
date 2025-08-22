@@ -4,13 +4,13 @@ import json
 import os
 import tempfile
 from collections import OrderedDict
+from importlib.resources import files
 from pathlib import Path
-from typing import Union, Optional
+from typing import Optional, Union
 
 import astropy.table
 import lephare as lp
 import numpy as np
-from importlib.resources import files
 from asdf import AsdfFile
 from astropy.table import Table
 from rail.core.stage import RailStage

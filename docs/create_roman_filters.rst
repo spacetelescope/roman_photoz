@@ -56,4 +56,3 @@ This module can be run as a command-line tool to generate filter definitions:
    python -m roman_photoz.create_roman_filters <input_filename>
 
 - ``<input_filename>``: File with monochromatic effective area per filter.
-

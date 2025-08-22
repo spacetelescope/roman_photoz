@@ -31,7 +31,7 @@ Usage Examples
 Alternatively, you can read and format the catalog directly during instantiation:
 
 .. code-block:: python
-   
+
    from roman_photoz.roman_catalog_handler import RomanCatalogHandler
 
    catalog_filename = "roman_catalog.parquet"

@@ -51,4 +51,3 @@ Another way to create a simulated catalog is to use the
    # create the simulated catalogs and save them in the current directory
    simulated_catalog1.process(output_filename="roman_simulated_catalog1.parquet")
    simulated_catalog2.process(output_filename="roman_simulated_catalog2.parquet")
-
