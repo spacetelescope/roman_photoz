@@ -18,16 +18,24 @@ Usage Examples
 
 .. code-block:: python
 
-   import os
-   from pathlib import Path
    from roman_photoz.roman_catalog_handler import RomanCatalogHandler
 
-   test_bigdata = os.getenv("TEST_BIGDATA")
-   if test_bigdata is None:
-       raise ValueError("Environment variable TEST_BIGDATA is not set")
-   reg_test_data = Path(test_bigdata)
+   catalog_filename = "roman_catalog.parquet"
 
-   test_cat = reg_test_data / "r0000101001001001001_0001_wfi01_cat.parquet"
-   catalog_handler = RomanCatalogHandler(test_cat.as_posix())
-   formatted_catalog = catalog_handler.process()
-   print("Catalog processing complete.")
+   # creating an instance of RomanCatalogHandler
+   handler = RomanCatalogHandler()
+   # read and format the catalog
+   formatted_catalog = handler.process(catalog_handler)
+
+
+Alternatively, you can read and format the catalog directly during instantiation:
+
+.. code-block:: python
+   
+   from roman_photoz.roman_catalog_handler import RomanCatalogHandler
+
+   catalog_filename = "roman_catalog.parquet"
+
+   # read, format, and store the catalog as an object attribute
+   handler = RomanCatalogHandler(catalog_filename)
+   formatted_catalog = handler.catalog
