@@ -14,7 +14,7 @@ This package provides utilities for:
 
 * Processing Roman catalog data in parquet and ASDF formats;
 * Translating filter definitions into the format expected by LePhare;
-* Generating simulated catalogs for development and testing;
+* Generating simulated images and catalogs for development and testing;
 * Estimating photometric redshifts using rail/LePhare.
 
 .. toctree::
