@@ -123,9 +123,6 @@ def test_create_files(sample_dataframe):
     test_path = Path("test_path")
 
     with (
-        patch(
-            "roman_photoz.create_roman_filters.create_path", return_value=test_path
-        ) as mock_create_path,
         patch("builtins.open", MagicMock()) as mock_open,
         patch(
             "roman_photoz.create_roman_filters.create_roman_phot_par_file"
