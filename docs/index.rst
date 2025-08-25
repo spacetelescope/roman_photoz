@@ -4,7 +4,7 @@ roman_photoz
 
 The ``roman_photoz`` package provides tools for processing multiband catalogs
 produced by the Roman Space Telescope Calibration Pipeline (``romancal``) to
-estimate photometric redshift.
+estimate photometric redshifts.
 
 Overview
 --------
