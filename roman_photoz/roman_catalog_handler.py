@@ -38,7 +38,7 @@ class RomanCatalogHandler:
         fit_err_colname : str
             Name of the column containing the error corresponding to fit_colname.
             It should contain a pair of curly braces as a placeholder for the
-            filter ID, e.g., "segment_{}_flux_err".
+            filter name, e.g., "segment_{}_flux_err".
         """
         self.cat_name = catname
         self.fit_colname = fit_colname
