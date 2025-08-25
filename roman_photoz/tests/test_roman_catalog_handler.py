@@ -100,7 +100,7 @@ class TestRomanCatalogHandler:
         roman_catalog_handler.cat_array = mock_catalog_data.as_array()
 
         # Execute
-        roman_catalog_handler.format_catalog()
+        roman_catalog_handler._format_catalog()
 
         # Check that the catalog was formatted correctly
         assert roman_catalog_handler.catalog is not None

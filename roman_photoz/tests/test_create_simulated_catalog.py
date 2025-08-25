@@ -20,19 +20,19 @@ def test_is_folder_not_empty(simulated_catalog):
         patch("pathlib.Path.is_dir", return_value=True),
         patch("pathlib.Path.glob", return_value=["file1", "file2"]),
     ):
-        assert simulated_catalog.is_folder_not_empty("dummy_path", "file") is True
+        assert simulated_catalog._is_folder_not_empty("dummy_path", "file") is True
 
     with patch("pathlib.Path.exists", return_value=False):
-        assert simulated_catalog.is_folder_not_empty("dummy_path", "file") is False
+        assert simulated_catalog._is_folder_not_empty("dummy_path", "file") is False
     with patch("pathlib.Path.is_dir", return_value=False):
-        assert simulated_catalog.is_folder_not_empty("dummy_path", "file") is False
+        assert simulated_catalog._is_folder_not_empty("dummy_path", "file") is False
     with patch("pathlib.Path.glob", return_value=[]):
-        assert simulated_catalog.is_folder_not_empty("dummy_path", "file") is False
+        assert simulated_catalog._is_folder_not_empty("dummy_path", "file") is False
 
 
 def test_add_ids(simulated_catalog):
     catalog = np.array([(1.0, 2.0), (3.0, 4.0)], dtype=[("col1", "f8"), ("col2", "f8")])
-    updated_catalog = simulated_catalog.add_ids(catalog)
+    updated_catalog = simulated_catalog._add_ids(catalog)
     assert "label" in updated_catalog.dtype.names
     assert np.array_equal(updated_catalog["label"], [1, 2])
 
@@ -47,7 +47,7 @@ def test_add_ids(simulated_catalog):
 )
 def test_add_error(simulated_catalog, params):
     catalog = np.array([(1.0, 2.0)], dtype=[("mag1", "f8"), ("mag2", "f8")])
-    updated_catalog = simulated_catalog.add_error(
+    updated_catalog = simulated_catalog._add_error(
         catalog, mag_noise=params["mag_noise"], seed=123
     )
     # ensure that the new columns are added and values are within the expected range
@@ -64,7 +64,7 @@ def test_pick_random_lines(simulated_catalog):
     simulated_catalog.simulated_data = np.array(
         [(1.0, 2.0), (3.0, 4.0), (5.0, 6.0)], dtype=[("col1", "f8"), ("col2", "f8")]
     )
-    random_lines = simulated_catalog.pick_random_lines(2)
+    random_lines = simulated_catalog._pick_random_lines(2)
     assert len(random_lines) == 2
 
 
@@ -77,7 +77,7 @@ def test_create_header(simulated_catalog):
         mock_open.return_value.__enter__.return_value.readline.return_value = (
             mock_file_content
         )
-        colnames = simulated_catalog.create_header("dummy_catalog")
+        colnames = simulated_catalog._create_header("dummy_catalog")
     # check that we have expanded the columns with _vector suffix into multiple columns (one for each filter)
     assert all(f"magnitude{filter}" in colnames for filter in FILTER_LIST)
     assert all(f"kcorr{filter}" in colnames for filter in FILTER_LIST)
@@ -86,13 +86,13 @@ def test_create_header(simulated_catalog):
 def test_process(simulated_catalog):
     with (
         patch.object(
-            simulated_catalog, "create_filter_files"
+            simulated_catalog, "_create_filter_files"
         ) as mock_create_filter_files,
         patch.object(
-            simulated_catalog, "create_simulated_data"
+            simulated_catalog, "_create_simulated_data"
         ) as mock_create_simulated_data,
         patch.object(
-            simulated_catalog, "create_simulated_input_catalog"
+            simulated_catalog, "_create_simulated_input_catalog"
         ) as mock_create_simulated_input_catalog,
     ):
         simulated_catalog.process(

@@ -59,7 +59,7 @@ class TestRomanCatalogProcess:
         rcp.data = {}
 
         # Call the method
-        rcp.create_informer_stage()
+        rcp._create_informer_stage()
 
         # Check that the correct model path was used
         call_args = mock_informer.make_stage.call_args[1]
@@ -127,10 +127,10 @@ class TestRomanCatalogProcess:
     )
     @patch("os.path.exists")
     @patch(
-        "roman_photoz.roman_catalog_process.RomanCatalogProcess.create_informer_stage"
+        "roman_photoz.roman_catalog_process.RomanCatalogProcess._create_informer_stage"
     )
     @patch(
-        "roman_photoz.roman_catalog_process.RomanCatalogProcess.create_estimator_stage"
+        "roman_photoz.roman_catalog_process.RomanCatalogProcess._create_estimator_stage"
     )
     def test_process_model_existence(
         self,
@@ -148,9 +148,9 @@ class TestRomanCatalogProcess:
         rcp = RomanCatalogProcess(config_filename=default_roman_config)
 
         # Mock get_data and format_data
-        rcp.get_data = MagicMock(return_value=Table())
-        rcp.format_data = MagicMock()
-        rcp.update_input = MagicMock()
+        rcp._get_data = MagicMock(return_value=Table())
+        rcp._format_data = MagicMock()
+        rcp._update_input = MagicMock()
 
         # Call process method
         rcp.process(input_filename="test")
@@ -232,21 +232,21 @@ class TestRomanCatalogProcess:
 
             # Check both components of the path
             expected_path = os.path.join(expected_dirname, model_filename)
-            assert (
-                rcp.informer_model_path == expected_path
-            ), f"Full path does not match. Expected: {expected_path}"
+            assert rcp.informer_model_path == expected_path, (
+                f"Full path does not match. Expected: {expected_path}"
+            )
 
             # Verify the directory part matches expected_dirname
             path_dirname = os.path.dirname(rcp.informer_model_path)
-            assert (
-                path_dirname == expected_dirname
-            ), f"Directory part does not match. Expected: {expected_dirname}"
+            assert path_dirname == expected_dirname, (
+                f"Directory part does not match. Expected: {expected_dirname}"
+            )
 
             # Verify the filename part matches model_filename
             path_basename = os.path.basename(rcp.informer_model_path)
-            assert (
-                path_basename == model_filename
-            ), f"Filename part does not match. Expected: {model_filename}"
+            assert path_basename == model_filename, (
+                f"Filename part does not match. Expected: {model_filename}"
+            )
 
         finally:
             # Restore original environment variables

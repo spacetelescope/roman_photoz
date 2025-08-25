@@ -82,8 +82,6 @@ def create_files(data: pd.DataFrame) -> None:
     ----------
     data : pd.DataFrame
         The DataFrame containing the filter data.
-    filepath : str, optional
-        The path where the filter files will be saved. If not provided, the current directory will be used.
     """
     path = create_path()
     wave = data.columns[0]
@@ -151,11 +149,6 @@ def create_roman_phot_par_file(filter_list: list, filter_rep: Path) -> None:
 def create_path() -> Path:
     """
     Create the directory structure for saving filter files.
-
-    Parameters
-    ----------
-    filepath : str, optional
-        The path where the filter files will be saved. If not provided, the current directory will be used.
 
     Returns
     -------
