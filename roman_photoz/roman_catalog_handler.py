@@ -34,7 +34,7 @@ class RomanCatalogHandler:
         fit_colname : str
             Name of the column to be used for fitting.
             It should contain a pair of curly braces as a placeholder for the
-            filter ID, e.g., "segment_{}_flux".
+            filter name, e.g., "segment_{}_flux".
         fit_err_colname : str
             Name of the column containing the error corresponding to fit_colname.
             It should contain a pair of curly braces as a placeholder for the
