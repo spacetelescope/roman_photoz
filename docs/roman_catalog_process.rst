@@ -16,8 +16,9 @@ Module API
 Examples
 --------
 
-For a quick start, we can use the roman-photoz CLI to create a Roman multiband catalog containing 2000
-simulated objects through the ``roman-photoz-create-simulated-catalog`` command:
+For a quick start, we can use the roman-photoz CLI to create a Roman multiband
+catalog containing 2000 simulated objects through the
+``roman-photoz-create-simulated-catalog`` command:
 
 .. code-block:: bash
 
@@ -34,6 +35,17 @@ the redshifts through the ``roman-photoz`` command:
    $ roman-photoz \
      --input-filename roman_photoz_simulated_catalog.parquet \
      --output-filename roman_photoz_results.parquet \
+     --fit-colname segment_{}_flux \
+     --fit-err-colname segment_{}_flux_err
+
+Note that if no output filename is provided, as in the following example, the input file will be updated
+with the results instead:
+
+.. code-block:: bash
+
+   # run roman-photoz and update the input file with the results
+   $ roman-photoz \
+     --input-filename roman_photoz_simulated_catalog.parquet \
      --fit-colname segment_{}_flux \
      --fit-err-colname segment_{}_flux_err
 

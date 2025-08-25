@@ -327,6 +327,7 @@ class RomanCatalogProcess:
             Name of the input file.
         output_filename : str, optional
             Name of the output file.
+            If none is provided (default), the input file will be updated in place.
         output_format : str, optional
             Format to save the results.
             Supported formats are "parquet" (default) and "asdf."

@@ -25,35 +25,8 @@ There are a few ways to run ``roman_photoz``:
        fit_err_colname="segment_{}_flux_err",  # name of the column with flux errors
    )
 
-2. Non-interactive (Script) Mode
---------------------------------
 
-.. code-block:: python
-
-   from roman_photoz import roman_catalog_process
-
-   argv = [
-       "--model-filename", "custom_model.pkl",
-       "--input-filename", "./roman_photoz/data/roman_catalog_template.parquet",
-       "--output-filename", "output_filename.parquet",
-       "--fit-colname", "segment_{}_flux",  # name of the column with flux values
-       "--fit-err-colname", "segment_{}_flux_err",  # name of the column with flux errors
-   ]
-   roman_catalog_process.main(argv)
-
-3. Python Module
-----------------
-
-.. code-block:: bash
-
-   python -m roman_photoz \
-     --model-filename=custom_model.pkl \
-     --input-filename=./roman_photoz/data/roman_catalog_template.parquet \
-     --output-filename=output_filename.parquet \
-     --fit-colname=segment_{}_flux \
-     --fit-err-colname=segment_{}_flux_err
-
-4. CLI
+2. CLI
 ------
 
 ``roman-photoz`` is also available as a command-line interface (CLI) tool.
