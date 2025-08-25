@@ -13,7 +13,7 @@ The Roman Space Telescope will produce large catalogs of astronomical objects.
 This package provides utilities for:
 
 * Processing Roman catalog data in parquet and ASDF formats;
-* Creating filter definitions based on Roman Space Telescope specifications;
+* Translating filter definitions into the format expected by LePhare;
 * Generating simulated catalogs for development and testing;
 * Estimating photometric redshifts using rail/LePhare.
 
