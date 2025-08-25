@@ -127,6 +127,7 @@ def test_create_files(sample_dataframe):
         patch(
             "roman_photoz.create_roman_filters.create_roman_phot_par_file"
         ) as mock_create_par,
+        patch("roman_photoz.create_roman_filters.create_path", return_value=test_path),
     ):
         create_files(
             sample_dataframe,
