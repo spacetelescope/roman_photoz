@@ -2,7 +2,8 @@
 Roman Catalog Process
 =====================
 
-This module provides functionality for processing catalog data related to the Roman Space Telescope.
+This module provides functionality for processing a Roman Telescope multiband
+catalog to obtain photometric redshifts for cataloged galaxies.
 
 Module API
 ----------
@@ -15,12 +16,38 @@ Module API
 Examples
 --------
 
-Basic usage::
+For a quick start, we can use the roman-photoz CLI to create a Roman multiband
+catalog containing 2000 simulated objects through the
+``roman-photoz-create-simulated-catalog`` command:
 
-    from roman_photoz.roman_catalog_process import process_catalog
+.. code-block:: bash
 
-    process_catalog('input_catalog.fits', 'processed_catalog.fits')
+  $ roman-photoz-create-simulated-catalog \
+     --output-path ./ \
+     --output-filename roman_photoz_simulated_catalog.parquet \
+     --nobj 2000
 
-Notes
------
-This module follows the Roman Space Telescope data specifications v1.2.
+Then, use the ``RomanCatalogProcess`` class to process the catalog and estimate
+the redshifts through the ``roman-photoz`` command:
+
+.. code-block:: bash
+
+   $ roman-photoz \
+     --input-filename roman_photoz_simulated_catalog.parquet \
+     --output-filename roman_photoz_results.parquet \
+     --fit-colname segment_{}_flux \
+     --fit-err-colname segment_{}_flux_err
+
+Note that if no output filename is provided, as in the following example, the input file will be updated
+with the results instead:
+
+.. code-block:: bash
+
+   # run roman-photoz and update the input file with the results
+   $ roman-photoz \
+     --input-filename roman_photoz_simulated_catalog.parquet \
+     --fit-colname segment_{}_flux \
+     --fit-err-colname segment_{}_flux_err
+
+Additional examples of how to use this module can be found in the :ref:`usage`
+section.

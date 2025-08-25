@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -124,18 +123,15 @@ def test_create_files(sample_dataframe):
     test_path = Path("test_path")
 
     with (
-        patch(
-            "roman_photoz.create_roman_filters.create_path", return_value=test_path
-        ) as mock_create_path,
         patch("builtins.open", MagicMock()) as mock_open,
         patch(
             "roman_photoz.create_roman_filters.create_roman_phot_par_file"
         ) as mock_create_par,
+        patch("roman_photoz.create_roman_filters.create_path", return_value=test_path),
     ):
-        create_files(sample_dataframe, "test_path")
-
-        # Verify create_path was called with the correct path
-        mock_create_path.assert_called_once_with("test_path")
+        create_files(
+            sample_dataframe,
+        )
 
         # Verify files were created for each filter column
         assert (
@@ -168,45 +164,23 @@ def test_create_roman_phot_par_file():
         assert "FILTER_CALIB 0,0" in file_content
 
 
-@pytest.mark.parametrize(
-    "input_path, env_vars, expected_path",
-    [
-        # Case 1: Default path (no arguments)
-        (
-            None,
-            {},
-            Path("/current/dir"),
-        ),
-        # Case 2: LEPHAREDIR environment variable is set
-        (
-            None,
-            {"LEPHAREDIR": "/lephare/dir"},
-            Path("/lephare/dir/filt/roman"),
-        ),
-        # Case 3: Custom path provided
-        (
-            "/custom/path",
-            {},
-            Path("/custom/path"),
-        ),
-    ],
-    ids=["default_path", "lepharedir_path", "custom_path"],
-)
-def test_create_path(input_path, env_vars, expected_path):
-    """Test create_path function with different scenarios using parametrization."""
-    with (
-        patch.dict(os.environ, env_vars, clear=True),
-        patch("pathlib.Path.resolve", return_value=expected_path),
-        patch("pathlib.Path.mkdir") as mock_mkdir,
-    ):
-        # Call the function with or without input path
-        path = create_path(input_path) if input_path is not None else create_path()
+def test_create_path_local(monkeypatch):
+    """Test that roman-photoz uses local path when LEPHAREDIR is not set."""
+    monkeypatch.delenv("LEPHAREDIR", raising=False)
+    path = create_path()
+    assert path == Path(".").resolve()
+    assert path.exists()
+    assert path.is_dir()
 
-        # Verify the path matches the expected path
-        assert path == expected_path
 
-        # Verify directory was created
-        mock_mkdir.assert_called_once_with(parents=True, exist_ok=True)
+def test_create_path_lepharedir(monkeypatch, tmp_path):
+    """Test that roman-photoz uses LEPHAREDIR environment variable if set."""
+    monkeypatch.setenv("LEPHAREDIR", str(tmp_path))
+    expected = tmp_path / "filt" / "roman"
+    path = create_path()
+    assert path == expected.resolve()
+    assert path.exists()
+    assert path.is_dir()
 
 
 def test_run_filter_command():
@@ -222,10 +196,10 @@ def test_run_filter_command():
         mock_filter_instance = MagicMock()
         mock_filter.return_value = mock_filter_instance
 
-        run_filter_command("/test/config/path")
+        run_filter_command()
 
-        # Verify create_path was called with the config path
-        mock_create_path.assert_called_once_with(filepath="/test/config/path")
+        # Verify create_path was called
+        mock_create_path.assert_called_once_with()
 
         # Verify Filter was instantiated with the correct config file path
         mock_filter.assert_called_once_with(config_file="/test/path/roman_phot.par")
@@ -248,7 +222,7 @@ def test_run():
         mock_df = pd.DataFrame({"wavelength": [1, 2, 3]})
         mock_read.return_value = mock_df
 
-        run("test_input.xlsx", "/test/output/path")
+        run("test_input.xlsx")
 
         # Verify read_effarea_file was called with the correct parameters
         mock_read.assert_called_once_with(filename="test_input.xlsx", header=1)
@@ -256,10 +230,8 @@ def test_run():
         # Verify get_auxiliary_data was called
         mock_get_data.assert_called_once()
 
-        # Verify create_files was called with the dataframe and output path
-        mock_create_files.assert_called_once_with(
-            data=mock_df, filepath="/test/output/path"
-        )
+        # Verify create_files was called with the dataframe only
+        mock_create_files.assert_called_once_with(data=mock_df)
 
-        # Verify run_filter_command was called with the output path
-        mock_run_filter.assert_called_once_with(config_file_path="/test/output/path")
+        # Verify run_filter_command was called with no arguments
+        mock_run_filter.assert_called_once_with()

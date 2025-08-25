@@ -73,7 +73,7 @@ def read_effarea_file(filename: str = "", **kwargs) -> pd.DataFrame:
     return df
 
 
-def create_files(data: pd.DataFrame, filepath: str = "") -> None:
+def create_files(data: pd.DataFrame) -> None:
     """
     Create filter files from the provided DataFrame. Each filter file contains
     wavelength and filter data, with a comment line at the top.
@@ -82,10 +82,8 @@ def create_files(data: pd.DataFrame, filepath: str = "") -> None:
     ----------
     data : pd.DataFrame
         The DataFrame containing the filter data.
-    filepath : str, optional
-        The path where the filter files will be saved. If not provided, the current directory will be used.
     """
-    path = create_path(filepath)
+    path = create_path()
     wave = data.columns[0]
     # Roman phot parameters
     filter_list: list = []
@@ -148,14 +146,9 @@ def create_roman_phot_par_file(filter_list: list, filter_rep: Path) -> None:
         f.write(content)
 
 
-def create_path(filepath: str = "") -> Path:
+def create_path() -> Path:
     """
     Create the directory structure for saving filter files.
-
-    Parameters
-    ----------
-    filepath : str, optional
-        The path where the filter files will be saved. If not provided, the current directory will be used.
 
     Returns
     -------
@@ -167,16 +160,13 @@ def create_path(filepath: str = "") -> Path:
     if lepharedir := os.environ.get("LEPHAREDIR", None):
         # save files to the lephare dir
         path = Path(lepharedir, "filt", "roman").resolve()
-    elif filepath is not None:
-        # save files to custom path
-        path = Path(filepath).resolve()
     # create path if they don't exist
     logger.info("Creating directory structure...")
     path.mkdir(parents=True, exist_ok=True)
     return path
 
 
-def run_filter_command(config_file_path: str = "") -> None:
+def run_filter_command() -> None:
     """
     Run the filter command to create the filter file needed by rail+lephare.
 
@@ -188,13 +178,13 @@ def run_filter_command(config_file_path: str = "") -> None:
         the relevant info about the filters (i.e. FILTER_REP, FILTER_LIST, TRANS_TYPE, FILTER_CALIB, FILTER_FILE)
         The result will be saved to LEPHAREWORK/filt with the name specified by FILTER_FILE and extension 'dat'.
     """
-    config_file_path = create_path(filepath=config_file_path).as_posix()
+    config_file_path = create_path().as_posix()
     config_file_path = Path(config_file_path, "roman_phot.par").as_posix()
     filter = Filter(config_file=config_file_path)
     filter.run()
 
 
-def run(input_filename: str = "", input_path: str = ""):
+def run(input_filename: str = ""):
     """
     Run the process to create filter files and execute the filter command.
 
@@ -202,7 +192,7 @@ def run(input_filename: str = "", input_path: str = ""):
     ----------
     input_filename : str
         The filename containing the monochromatic effective area of each filter per column.
-    input_path : str
+    output_data : str
         The path where the results will be saved.
     """
     logger.info("Starting filter file creation...")
@@ -216,13 +206,13 @@ def run(input_filename: str = "", input_path: str = ""):
     # format and create the file for each filter
     # containing lambda vs transmission
     logger.info("Creating individual filter files...")
-    create_files(data=data, filepath=input_path)
+    create_files(data=data)
 
     # run filter command to create the filter
     # file containing lambda vs transmission for all filters
     # (merge all the filter files created in the previous call)
     logger.info("Running filter command to merge filter files...")
-    run_filter_command(config_file_path=input_path)
+    run_filter_command()
     logger.info("Filter file creation completed successfully")
 
 
@@ -230,13 +220,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Process a file containing the monochromatic effective area of each filter per column and create output files for each filter as well as the merged file for rail+lephare."
     )
-    parser.add_argument("input_path", help="Path where the results will be saved.")
     parser.add_argument(
         "input_filename",
         help="Filename containing the monochromatic effective area data.",
     )
     args = parser.parse_args()
 
-    run(input_filename=args.input_filename, input_path=args.input_path)
+    run(input_filename=args.input_filename)
 
     logger.info("Done.")

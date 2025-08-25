@@ -2,7 +2,20 @@
 Roman Catalog Handler
 =====================
 
-The ``roman_catalog_handler`` module provides functionality for handling catalog data from the Roman Space Telescope.
+This module is responsible for reading, processing, and formatting source
+catalogs from the Roman Space Telescope. Its main purposes are:
+
+- **Reading Catalogs:** It supports reading catalogs in ASDF and Parquet
+  formats;
+
+- **Formatting Data:** It reformats the Roman catalog to ensure required
+  columns (such as fluxes, errors, labels, and redshifts) are present and
+  properly named for downstream processing;
+
+- **Unit Conversion:** It handles unit conversions as required by LePhare;
+
+- **Handling Missing Data:** If expected columns are missing, it fills them
+  with default values so the catalog remains usable;
 
 Module API
 ----------
@@ -14,27 +27,27 @@ Module API
 
 Usage Examples
 --------------
-The following example demonstrates how to use the `RomanCatalogHandler` class to read and process a catalog file.
 
 .. code-block:: python
 
-     import os
-     from pathlib import Path
-     from roman_photoz.roman_catalog_handler import RomanCatalogHandler
+   from roman_photoz.roman_catalog_handler import RomanCatalogHandler
 
-     # Ensure the TEST_BIGDATA environment variable is set
-     test_bigdata = os.getenv("TEST_BIGDATA")
-     if test_bigdata is None:
-          raise ValueError("Environment variable TEST_BIGDATA is not set")
-     reg_test_data = Path(test_bigdata)
+   catalog_filename = "roman_catalog.parquet"
 
-     # Specify the catalog file
-     test_cat = reg_test_data / "r0000101001001001001_0001_wfi01_cat.parquet"
+   # creating an instance of RomanCatalogHandler
+   handler = RomanCatalogHandler()
+   # read and format the catalog
+   formatted_catalog = handler.process(catalog_handler)
 
-     # Create an instance of RomanCatalogHandler
-     catalog_handler = RomanCatalogHandler(test_cat.as_posix())
 
-     # Process the catalog
-     formatted_catalog = catalog_handler.process()
+Alternatively, you can read and format the catalog directly during instantiation:
 
-     print("Catalog processing complete.")
+.. code-block:: python
+
+   from roman_photoz.roman_catalog_handler import RomanCatalogHandler
+
+   catalog_filename = "roman_catalog.parquet"
+
+   # read, format, and store the catalog as an object attribute
+   handler = RomanCatalogHandler(catalog_filename)
+   formatted_catalog = handler.catalog

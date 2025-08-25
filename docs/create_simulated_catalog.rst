@@ -2,7 +2,10 @@
 Create Simulated Catalog
 ========================
 
-This module provides functionality to create a simulated catalog using data from the Roman Space Telescope. It leverages the LePhare photometric redshift estimation tool and other utilities to generate simulated data, process it, and save it in a structured format.
+This module provides functionality to create a simulated catalog using data
+from the Roman Space Telescope. It leverages the LePhare photometric redshift
+estimation tool and other utilities to generate simulated data, process it, and
+save it in a structured format.
 
 Module API
 ----------
@@ -15,42 +18,36 @@ Module API
 Command-Line Usage
 ------------------
 
-The module can also be executed as a standalone script to create a simulated catalog. It provides command-line arguments for specifying the output path and filename.
-
-**Arguments**
-
-- ``--output_path`` (:class:`str`)
-  Path to save the output catalog (default: ``LEPHAREWORK``).
-
-- ``--output_filename`` (:class:`str`)
-  Filename for the output catalog (default: ``roman_simulated_catalog.asdf``).
-
-**Example**
+Once ``roman-photoz`` is installed, you can create a simulated catalog using
+the CLI command ``roman-photoz-create-simulated-catalog``. For example, to
+create a Roman multiband catalog with 1000 simulated objects and have it saved
+in the current directory under the name ``simulated_catalog.parquet``, run the
+following command:
 
 .. code-block:: bash
 
-   python -m roman_photoz.create_simulated_catalog --output_path=/path/to/output/ --output_filename=simulated_catalog.asdf
+  $ roman-photoz-create-simulated-catalog \
+   --output-path ./ \
+   --output-filename simulated_catalog.parquet \
+   --nobj=1000
+
 
 Usage Examples
 --------------
 
-The following example demonstrates how to programmatically create a simulated catalog:
+Another way to create a simulated catalog is to use the
+``SimulatedCatalog`` class directly in your Python code. For example:
 
 .. code-block:: python
 
-    from roman_photoz.create_simulated_catalog import CreateSimulatedCatalog
+   from roman_photoz.create_simulated_catalog import SimulatedCatalog
 
-    # Initialize the catalog creator with default parameters
-    creator = CreateSimulatedCatalog()
+   # simulate 1000 objects and add a gaussian noise with sigma=0.15 mag
+   simulated_catalog1 = SimulatedCatalog(1000, mag_noise=0.15)
 
-    # Create a simulated catalog with 100 sources
-    catalog = creator.create_catalog(n_sources=100)
+   # simulate 5000 objects and add a gaussian noise with sigma=0.05 mag
+   simulated_catalog2 = SimulatedCatalog(5000, mag_noise=0.05)
 
-    # Save the catalog to a file
-    creator.save_catalog(
-        catalog,
-        output_path="/path/to/output/",
-        output_filename="simulated_catalog.asdf"
-    )
-
-    print(f"Simulated catalog with {len(catalog)} sources created successfully")
+   # create the simulated catalogs and save them in the current directory
+   simulated_catalog1.process(output_filename="roman_simulated_catalog1.parquet")
+   simulated_catalog2.process(output_filename="roman_simulated_catalog2.parquet")

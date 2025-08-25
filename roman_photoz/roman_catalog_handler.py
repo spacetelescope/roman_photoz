@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Optional
 
 import numpy as np
 from astropy.table import Table
@@ -10,7 +11,8 @@ from roman_photoz.utils import get_roman_filter_list
 
 class RomanCatalogHandler:
     """
-    A class to handle Roman catalog operations including reading and formatting it in a suitable way for roman_photoz.
+    A class to handle Roman catalog operations including reading and formatting
+    it in a suitable way for roman_photoz.
     """
 
     def __init__(
@@ -20,18 +22,23 @@ class RomanCatalogHandler:
         fit_err_colname: str = "segment_{}_flux_err",
     ):
         """
-        Initialize the RomanCatalogHandler with a catalog name and the name of the columns to be used for fitting.
+        Initialize the RomanCatalogHandler with a catalog name and the name of
+        the columns to be used for fitting.
 
         Parameters
         ----------
         catname : str, optional
-            The name of the catalog file (default is an empty string).
+            The name of the catalog file (default is an empty string, in which
+            case only an instance of the class will be created for posterior
+            processing).
         fit_colname : str
             Name of the column to be used for fitting.
-            It should contain a pair of curly braces as a placeholder for the filter ID, e.g., "segment_{}_flux".
+            It should contain a pair of curly braces as a placeholder for the
+            filter name, e.g., "segment_{}_flux".
         fit_err_colname : str
             Name of the column containing the error corresponding to fit_colname.
-            It should contain a pair of curly braces as a placeholder for the filter ID, e.g., "segment_{}_flux_err".
+            It should contain a pair of curly braces as a placeholder for the
+            filter name, e.g., "segment_{}_flux_err".
         """
         self.cat_name = catname
         self.fit_colname = fit_colname
@@ -45,7 +52,7 @@ class RomanCatalogHandler:
         if catname:
             self.process()
 
-    def format_catalog(self):
+    def _format_catalog(self):
         """
         Format the catalog by appending necessary fields and columns.
         """
@@ -99,7 +106,7 @@ class RomanCatalogHandler:
 
         logger.info("Catalog formatting completed")
 
-    def read_catalog(self):
+    def _read_catalog(self):
         """
         Read the catalog file and convert it to a numpy structured array.
         """
@@ -117,7 +124,7 @@ class RomanCatalogHandler:
         logger.info("Catalog read successfully")
         return cat_array
 
-    def process(self):
+    def process(self, input_filename: Optional[str] = None) -> np.ndarray:
         """
         Process the catalog by reading and formatting it.
 
@@ -126,22 +133,11 @@ class RomanCatalogHandler:
         np.ndarray
             The formatted catalog.
         """
+        if input_filename is not None:
+            self.cat_name = input_filename
         if self.cat_array is None:
-            self.cat_array = self.read_catalog()
+            self.cat_array = self._read_catalog()
         if self.catalog is None or len(self.catalog) == 0:
             self.catalog = np.empty(0, dtype=[])
-            self.format_catalog()
+            self._format_catalog()
         return self.catalog
-
-
-if __name__ == "__main__":
-    data_path = Path(__file__).parent / "data"
-    test_cat = (
-        data_path / "r00001_p_v01001001001001_270p65x49y70_f158_mbcat_cat.parquet"
-    ).as_posix()
-
-    catalog_handler = RomanCatalogHandler(
-        catname=test_cat,
-        fit_colname="segment_{}_flux",
-        fit_err_colname="segment_{}_flux_err",
-    )

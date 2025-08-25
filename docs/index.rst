@@ -2,29 +2,35 @@
 roman_photoz
 ============
 
-The ``roman_photoz`` package provides tools for processing catalogs
-produced by the Roman Space Telescope Calibration Pipeline (``romancal``)
-to estimate photometric redshift.
+The ``roman_photoz`` package provides tools for processing multiband catalogs
+produced by the Roman Space Telescope Calibration Pipeline (``romancal``) to
+estimate photometric redshifts.
 
 Overview
 --------
 
 The Roman Space Telescope will produce large catalogs of astronomical objects.
-This package provides tools for processing these catalogs to estimate photometric
-redshifts using rail/LePhare. Key features include:
+This package provides utilities for:
 
-* Processing Roman catalog data in ASDF format
-* Creating filter definitions based on Roman Space Telescope specifications
-* Generating simulated catalogs for development and testing
-* Estimating photometric redshifts using rail/LePhare
+* Processing Roman catalog data in parquet and ASDF formats;
+* Translating filter definitions into the format expected by LePhare;
+* Generating simulated images and catalogs for development and testing;
+* Estimating photometric redshifts using rail/LePhare.
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents
+   :caption: Getting Started
 
    installation
    usage
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Developer Guide
+
    regtest_framework
+   CONTRIBUTING
+   CHANGELOG
 
 .. toctree::
    :maxdepth: 2
@@ -34,7 +40,6 @@ redshifts using rail/LePhare. Key features include:
    roman_catalog_process
    roman_catalog_handler
    create_simulated_catalog
-
 
 API Reference
 -------------

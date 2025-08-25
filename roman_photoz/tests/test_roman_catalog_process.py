@@ -59,7 +59,7 @@ class TestRomanCatalogProcess:
         rcp.data = {}
 
         # Call the method
-        rcp.create_informer_stage()
+        rcp._create_informer_stage()
 
         # Check that the correct model path was used
         call_args = mock_informer.make_stage.call_args[1]
@@ -127,10 +127,10 @@ class TestRomanCatalogProcess:
     )
     @patch("os.path.exists")
     @patch(
-        "roman_photoz.roman_catalog_process.RomanCatalogProcess.create_informer_stage"
+        "roman_photoz.roman_catalog_process.RomanCatalogProcess._create_informer_stage"
     )
     @patch(
-        "roman_photoz.roman_catalog_process.RomanCatalogProcess.create_estimator_stage"
+        "roman_photoz.roman_catalog_process.RomanCatalogProcess._create_estimator_stage"
     )
     def test_process_model_existence(
         self,
@@ -148,9 +148,9 @@ class TestRomanCatalogProcess:
         rcp = RomanCatalogProcess(config_filename=default_roman_config)
 
         # Mock get_data and format_data
-        rcp.get_data = MagicMock(return_value=Table())
-        rcp.format_data = MagicMock()
-        rcp.update_input = MagicMock()
+        rcp._get_data = MagicMock(return_value=Table())
+        rcp._format_data = MagicMock()
+        rcp._update_input = MagicMock()
 
         # Call process method
         rcp.process(input_filename="test")

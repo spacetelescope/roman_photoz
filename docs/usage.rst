@@ -1,70 +1,50 @@
+.. _usage:
+
 =====
 Usage
 =====
 
-To use `roman_photoz`, follow these steps:
+There are a few ways to run ``roman_photoz``:
+
+1. Interactive (Python) Mode
+----------------------------
+
+.. code-block:: python
+
+   from roman_photoz.roman_catalog_process import RomanCatalogProcess
+
+   rcp = RomanCatalogProcess(
+       config_filename="",  # use default config
+       model_filename="custom_model.pkl"
+   )
+
+   rcp.process(
+       input_filename="./roman_photoz/data/roman_catalog_template.parquet",
+       output_filename="output_filename.parquet",
+       fit_colname="segment_{}_flux",  # name of the column with flux values
+       fit_err_colname="segment_{}_flux_err",  # name of the column with flux errors
+   )
 
 
-1. Interactive mode:
+2. CLI
+------
 
-    .. code-block:: python
+``roman-photoz`` is also available as a command-line interface (CLI) tool.
+After installing the package, two commands will be available in your environment:
 
-        import matplotlib.pyplot as plt
-        import numpy as np
-        from roman_photoz.roman_catalog_process import RomanCatalogProcess
 
-        # create a RomanCatalogProcess object with default configuration
-        # and custom model filename
-        rcp = RomanCatalogProcess(
-            config_filename="",  # use default config
-            model_filename="custom_model.pkl"  # specify custom model filename
-        )
+- ``roman-photoz-create-simulated-catalog``: creates a simulated Roman multiband catalog.
+- ``roman-photoz``: starts the processing of a Roman multiband catalog to estimate redshifts;
 
-        # process the catalog
-        rcp.process(
-            input_path="/path/to/input/file/",
-            input_filename="roman_simulated_catalog.asdf",
-            output_path="/path/to/output/file/",
-            output_filename="output_filename.asdf",
-            save_results=True,
-        )
+For instance, you can run the following command in your terminal to process a
+template Roman multiband catalog provided with the roman-photoz package:
 
-        # examples of visualization
-        # plot the estimated PDF for the first object
-        zgrid = np.linspace(0, 7, 200)
-        plt.plot(zgrid, np.squeeze(rcp.estimated.data.pdf(zgrid)[0]))
+.. code-block:: bash
 
-        # plot the estimated redshift ("Z_BEST") vs. the actual redshift ("ZSPEC")
-        plt.plot(rcp.estimated.data.ancil["ZSPEC"], rcp.estimated.data.ancil["Z_BEST"], "o")
+  $ roman-photoz \
+    --input-filename ./roman_photoz/data/roman_catalog_template.parquet \
+    --output-filename output_filename.parquet \
+    --fit-colname segment_{}_flux \
+    --fit-err-colname segment_{}_flux_err
 
-        # plot the redshift vs. the simulated magnitude in all filters
-        plt.plot(rcp.estimated.data.ancil["ZSPEC"], rcp.estimated.data.ancil["MAG_OBS()"], "o")
-
-2. Non-interactive mode:
-
-    .. code-block:: python
-
-        from roman_photoz import roman_catalog_process
-
-        argv = [
-            "--model_filename",
-            "custom_model.pkl",
-            "--input_path",
-            "/path/to/input/file/",
-            "--input_filename",
-            "roman_simulated_catalog.asdf",
-            "--output_path",
-            "/path/to/output/file/",
-            "--output_filename",
-            "output_filename.asdf",
-            "--save_results",
-            "True",
-        ]
-
-        roman_catalog_process.main(argv)
-
-3. Command line mode:
-
-    .. code-block:: bash
-
-        python -m roman_photoz --model_filename=custom_model.pkl --input_path=/path/to/input/file/ --input_filename=roman_simulated_catalog.asdf --output_path=/path/to/output/file/ --output_filename=output_filename.asdf --save_results=True
+See module docs for additional options and examples.
