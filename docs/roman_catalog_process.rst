@@ -3,7 +3,7 @@ Roman Catalog Process
 =====================
 
 This module provides functionality for processing a Roman Telescope multiband
-catalog.
+catalog to obtain photometric redshifts for cataloged galaxies.
 
 Module API
 ----------
