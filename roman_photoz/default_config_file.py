@@ -56,7 +56,7 @@ default_roman_config = {
     "ZPHOTLIB": "GAL_COSMOS,STAR_COSMOS,QSO_COSMOS",
     "CAT_OUT": "roman_simulated_catalog.out",
     "PARA_OUT": str(Path(__file__).parent / "data" / "default_roman_output.para"),
-    "VERBOSE": "YES",
+    "VERBOSE": "NO",
     "PDZ_TYPE": "BAY_ZG",
     "PDZ_OUT": "test",
     "RM_DISCREPANT_BD": "500",  # throw out a band if it has >500 chi^2.
