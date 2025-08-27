@@ -1,3 +1,4 @@
+import io
 import logging
 
 import pytest
@@ -17,108 +18,154 @@ def test_setup_logging_creates_logger_with_correct_name():
     assert logger.name == "roman_photoz"
 
 
-@pytest.mark.parametrize(
-    "log_level, level_name",
-    [
-        (logging.NOTSET, "NOTSET"),
-        (logging.DEBUG, "DEBUG"),
-        (logging.INFO, "INFO"),
-        (logging.WARNING, "WARNING"),
-        (logging.ERROR, "ERROR"),
-        (logging.CRITICAL, "CRITICAL"),
-    ],
-    ids=["NOTSET", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-)
-def test_setup_logging_sets_correct_level(log_level, level_name):
-    """Test that setup_logging sets the correct log level for all available levels."""
-    # Clear existing handlers and reset for clean test
-    logger_instance = logging.getLogger("roman_photoz")
-    logger_instance.handlers.clear()
-
-    # Test the specified log level
-    logger = setup_logging(level=log_level)
-    assert (
-        logger.level == log_level
-    ), f"Logger level should be {level_name} ({log_level})"
-
-
-def test_setup_logging_creates_handler():
-    """Test that setup_logging creates console handler."""
-    # Clear existing handler for clean test
+def test_setup_logging_creates_handlers_and_filters(tmp_path):
+    """Test that setup_logging creates the correct handlers and filters."""
     logging.getLogger("roman_photoz").handlers.clear()
 
-    logger = setup_logging()
+    log_file = tmp_path / "test_roman_photoz.log"
+    logger = setup_logging(log_file=str(log_file))
 
-    # Should have 1 handler (console)
-    assert len(logger.handlers) == 1
+    # Should have 2 handlers (console and file)
+    assert len(logger.handlers) == 2
 
     # Check handler types
     handler_types = [type(h) for h in logger.handlers]
     assert logging.StreamHandler in handler_types
+    assert logging.FileHandler in handler_types
+
+    # Console handler only allows INFO messages
+    console_handler = [
+        h for h in logger.handlers if isinstance(h, logging.StreamHandler)
+    ][0]
+    assert console_handler.level == logging.INFO
+    assert (
+        any(
+            hasattr(f, "__call__") and getattr(f, "__name__", "") == "<lambda>"
+            for f in console_handler.filters
+        )
+        or console_handler.filters
+    )  # lambda filter present
+
+    # File handler is attached to the same logger
+    file_handlers = [h for h in logger.handlers if isinstance(h, logging.FileHandler)]
+    assert file_handlers
+    assert file_handlers[0].baseFilename.endswith("test_roman_photoz.log")
 
 
-def test_setup_logging_uses_correct_formatter():
+def test_setup_logging_uses_correct_formatter(tmp_path):
     """Test that setup_logging uses the correct formatter."""
-    # Clear existing handlers for clean test
     logging.getLogger("roman_photoz").handlers.clear()
 
-    logger = setup_logging()
+    log_file = tmp_path / "test_roman_photoz.log"
+    logger = setup_logging(log_file=str(log_file))
 
-    # All handlers should have the same formatter
     for handler in logger.handlers:
         formatter = handler.formatter
         assert formatter._fmt == "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
+    # Also check file handler formatter
+    file_handler = [h for h in logger.handlers if isinstance(h, logging.FileHandler)][0]
+    assert (
+        file_handler.formatter._fmt
+        == "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
 
-def test_setup_logging_only_configures_once():
+
+def test_setup_logging_only_configures_once(tmp_path):
     """Test that setup_logging doesn't add handlers if already configured."""
-    # Clear existing handlers for clean test
-    logging_instance = logging.getLogger("roman_photoz")
-    logging_instance.handlers.clear()
+    logging.getLogger("roman_photoz").handlers.clear()
+    logging.getLogger().handlers.clear()
 
-    # First call should add handlers
-    logger1 = setup_logging()
+    log_file = tmp_path / "test_roman_photoz.log"
+    logger1 = setup_logging(log_file=str(log_file))
     initial_handler_count = len(logger1.handlers)
 
-    # Second call should not add more handlers
-    logger2 = setup_logging()
+    logger2 = setup_logging(log_file=str(log_file))
     assert len(logger2.handlers) == initial_handler_count
 
 
 @pytest.mark.parametrize(
-    "log_level, message_level, should_log",
+    "message_level,should_appear_on_console",
     [
-        (logging.INFO, logging.DEBUG, False),  # DEBUG shouldn't be logged at INFO level
-        (logging.INFO, logging.INFO, True),  # INFO should be logged at INFO level
-        (logging.INFO, logging.WARNING, True),  # WARNING should be logged at INFO level
-        (logging.INFO, logging.ERROR, True),  # ERROR should be logged at INFO level
-        (logging.DEBUG, logging.DEBUG, True),  # DEBUG should be logged at DEBUG level
+        (logging.DEBUG, False),
+        (logging.INFO, True),
+        (logging.WARNING, False),
+        (logging.ERROR, False),
+        (logging.CRITICAL, False),
     ],
     ids=[
-        "info_rejects_debug",
-        "info_accepts_info",
-        "info_accepts_warning",
-        "info_accepts_error",
-        "debug_accepts_debug",
+        "debug_not_on_console",
+        "info_on_console",
+        "warning_not_on_console",
+        "error_not_on_console",
+        "critical_not_on_console",
     ],
 )
-def test_logger_respects_log_level(log_level, message_level, should_log):
-    """Test that logger respects the configured log level."""
-    # Clear existing handlers for clean test
+def test_console_only_shows_info_messages(
+    tmp_path, message_level, should_appear_on_console
+):
+    """Test that only INFO messages appear on the console."""
     logging.getLogger("roman_photoz").handlers.clear()
+    logging.getLogger().handlers.clear()
 
-    # Create logger with specified level and test file
-    logger = setup_logging(level=log_level)
+    log_file = tmp_path / "test_roman_photoz.log"
+    logger = setup_logging(log_file=str(log_file))
 
-    # Log a test message at the specified level
-    test_message = "Test log message for level testing"
+    # Patch sys.stderr to capture console output
+    stream = io.StringIO()
+    logger.handlers[0].stream = stream
 
-    # Use the appropriate logging method based on the message level
-    if message_level == logging.DEBUG:
-        logger.debug(test_message)
-    elif message_level == logging.INFO:
-        logger.info(test_message)
-    elif message_level == logging.WARNING:
-        logger.warning(test_message)
-    elif message_level == logging.ERROR:
-        logger.error(test_message)
+    test_message = "Test message"
+    log_func = {
+        logging.DEBUG: logger.debug,
+        logging.INFO: logger.info,
+        logging.WARNING: logger.warning,
+        logging.ERROR: logger.error,
+        logging.CRITICAL: logger.critical,
+    }[message_level]
+    log_func(test_message)
+
+    output = stream.getvalue()
+    if should_appear_on_console:
+        assert test_message in output
+    else:
+        assert test_message not in output
+
+
+@pytest.mark.parametrize(
+    "message_level",
+    [
+        logging.DEBUG,
+        logging.INFO,
+        logging.WARNING,
+        logging.ERROR,
+        logging.CRITICAL,
+    ],
+)
+def test_all_messages_go_to_file(tmp_path, message_level):
+    """Test that all log levels are written to the log file."""
+    logging.getLogger("roman_photoz").handlers.clear()
+    logging.getLogger().handlers.clear()
+
+    log_file = tmp_path / "test_roman_photoz.log"
+    logger = setup_logging(log_file=str(log_file))
+
+    test_message = f"File log message {message_level}"
+    log_func = {
+        logging.DEBUG: logger.debug,
+        logging.INFO: logger.info,
+        logging.WARNING: logger.warning,
+        logging.ERROR: logger.error,
+        logging.CRITICAL: logger.critical,
+    }[message_level]
+    log_func(test_message)
+
+    # Flush and close file handlers to ensure logs are written and file is closed
+    for handler in logger.handlers:
+        if isinstance(handler, logging.FileHandler):
+            handler.flush()
+            handler.close()
+
+    with open(log_file) as f:
+        contents = f.read()
+    assert test_message in contents
