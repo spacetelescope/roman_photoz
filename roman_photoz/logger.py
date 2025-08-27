@@ -8,6 +8,8 @@ def setup_logging(level=logging.INFO, log_file="roman_photoz.log"):
 
     if not logger.handlers:
         logger.propagate = False
+
+        # Set the level
         logger.setLevel(logging.DEBUG)  # Capture all levels, handlers will filter
 
         # Formatter
@@ -26,8 +28,8 @@ def setup_logging(level=logging.INFO, log_file="roman_photoz.log"):
         file_handler = logging.FileHandler(log_file)
         file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(formatter)
-        logging.getLogger().addHandler(file_handler)
-        logging.getLogger().setLevel(logging.DEBUG)
+        logger.addHandler(file_handler)
+
 
     return logger
 
