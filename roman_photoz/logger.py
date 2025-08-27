@@ -31,5 +31,6 @@ def setup_logging(level=logging.INFO, log_file="roman_photoz.log"):
 
     return logger
 
+
 # Create the default logger instance
 logger = setup_logging()
