@@ -30,7 +30,6 @@ def setup_logging(level=logging.INFO, log_file="roman_photoz.log"):
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
 
-
     return logger
 
 

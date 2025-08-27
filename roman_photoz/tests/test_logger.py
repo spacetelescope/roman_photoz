@@ -1,6 +1,5 @@
-import logging
-import sys
 import io
+import logging
 
 import pytest
 
@@ -35,12 +34,17 @@ def test_setup_logging_creates_handlers_and_filters(tmp_path):
     assert logging.FileHandler in handler_types
 
     # Console handler only allows INFO messages
-    console_handler = [h for h in logger.handlers if isinstance(h, logging.StreamHandler)][0]
+    console_handler = [
+        h for h in logger.handlers if isinstance(h, logging.StreamHandler)
+    ][0]
     assert console_handler.level == logging.INFO
-    assert any(
-        hasattr(f, "__call__") and getattr(f, "__name__", "") == "<lambda>"
-        for f in console_handler.filters
-    ) or console_handler.filters  # lambda filter present
+    assert (
+        any(
+            hasattr(f, "__call__") and getattr(f, "__name__", "") == "<lambda>"
+            for f in console_handler.filters
+        )
+        or console_handler.filters
+    )  # lambda filter present
 
     # File handler is attached to the same logger
     file_handlers = [h for h in logger.handlers if isinstance(h, logging.FileHandler)]
@@ -61,7 +65,10 @@ def test_setup_logging_uses_correct_formatter(tmp_path):
 
     # Also check file handler formatter
     file_handler = [h for h in logger.handlers if isinstance(h, logging.FileHandler)][0]
-    assert file_handler.formatter._fmt == "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    assert (
+        file_handler.formatter._fmt
+        == "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
 
 
 def test_setup_logging_only_configures_once(tmp_path):
@@ -94,7 +101,9 @@ def test_setup_logging_only_configures_once(tmp_path):
         "critical_not_on_console",
     ],
 )
-def test_console_only_shows_info_messages(tmp_path, message_level, should_appear_on_console):
+def test_console_only_shows_info_messages(
+    tmp_path, message_level, should_appear_on_console
+):
     """Test that only INFO messages appear on the console."""
     logging.getLogger("roman_photoz").handlers.clear()
     logging.getLogger().handlers.clear()
@@ -160,7 +169,3 @@ def test_all_messages_go_to_file(tmp_path, message_level):
     with open(log_file) as f:
         contents = f.read()
     assert test_message in contents
-
-
-
-
