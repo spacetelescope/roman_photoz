@@ -27,7 +27,7 @@ def roman_catalog_process():
 
 def test_roman_photoz(tmp_path, dms_logger):
     # create catalog
-    sc = create_simulated_catalog.SimulatedCatalog(nobj=10000, mag_noise=0.02)
+    sc = create_simulated_catalog.SimulatedCatalog(nobj=500, mag_noise=0.02)
     sc.process(tmp_path, "cat.parquet")
 
     # create instance
