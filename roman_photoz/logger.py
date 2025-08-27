@@ -1,5 +1,5 @@
-import sys
 import logging
+import sys
 
 
 def setup_logging(level=logging.INFO, log_file="roman_photoz.log"):
