@@ -4,9 +4,9 @@ on:
   push:
     branches:
       - main
-      - '*x'
+      - "*x"
     tags:
-      - '*'
+      - "*"
   pull_request:
     branches:
       - main
@@ -24,7 +24,7 @@ concurrency:
 
 jobs:
   test:
-    uses: OpenAstronomy/github-actions-workflows/.github/workflows/tox.yml@86823142467dd2afcd1bbac57d3a664cf468eb3b  # v2.1.0
+    uses: OpenAstronomy/github-actions-workflows/.github/workflows/tox.yml@86823142467dd2afcd1bbac57d3a664cf468eb3b # v2.1.0
     with:
       libraries: |
         apt:
