@@ -73,9 +73,15 @@ def save_catalog(
     logger.info("Catalog saved successfully")
 
 
-def get_roman_filter_list() -> list[str]:
+def get_roman_filter_list(uppercase: bool = False) -> list[str]:
     """
     Get the filter names from the default Roman configuration in format 'fNNN'.
+
+    Parameters
+    ----------
+    uppercase : bool, optional
+        If True, return filter names in uppercase.
+        If False, return in lowercase (default).
 
     Returns
     -------
@@ -84,11 +90,10 @@ def get_roman_filter_list() -> list[str]:
     """
     filter_list = default_roman_config.get("FILTER_LIST")
     if filter_list is not None:
-        return (
-            filter_list.replace(".pb", "")
-            .replace("roman/roman_", "")
-            .lower()
-            .split(",")
-        )
+        filters = filter_list.replace(".pb", "").replace("roman/roman_", "").split(",")
+        if uppercase:
+            return [f.upper() for f in filters]
+        else:
+            return [f.lower() for f in filters]
     else:
         raise ValueError("Filter list not found in default config file.")
