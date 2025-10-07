@@ -111,14 +111,19 @@ def update_fluxes(
 
     for colname in filter_list:
         if colname in updated_catalog.colnames:
-            fluxname = f"segment_{colname.lower()}_flux"
-            # convert from nJy (Roman) to maggies (romanisim_input_catalog)
-            converted_flux = njy_to_mgy(flux_catalog[fluxname]) * fudge_factor
-            # scale fluxes based on reference filter if requested
-            if apply_scaling:
-                updated_catalog[colname] = scale_flux(converted_flux, scaling_factor)
+            if colname == ref_filter:
+                updated_catalog[colname] = target_catalog[ref_filter] * fudge_factor
             else:
-                updated_catalog[colname] = converted_flux
+                fluxname = f"segment_{colname.lower()}_flux"
+                # convert from nJy (Roman) to maggies (romanisim_input_catalog)
+                converted_flux = njy_to_mgy(flux_catalog[fluxname]) * fudge_factor
+                # scale fluxes based on reference filter if requested
+                if apply_scaling:
+                    updated_catalog[colname] = scale_flux(
+                        converted_flux, scaling_factor
+                    )
+                else:
+                    updated_catalog[colname] = converted_flux
 
     # Add source ID from roman_simulated_catalog
     updated_catalog["label"] = flux_catalog["label"]
