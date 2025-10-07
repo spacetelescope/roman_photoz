@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from astropy import units as u
 from astropy.table import Table
-from update_romanisim_catalog_fluxes import (
+from roman_photoz.update_romanisim_catalog_fluxes import (
     create_random_catalog,
     njy_to_mgy,
     scale_flux,
