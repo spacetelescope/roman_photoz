@@ -87,6 +87,4 @@ def test_update_fluxes(monkeypatch):
     assert np.allclose(
         updated["F184"], njy_to_mgy(flux["segment_f184_flux"]).value * 100
     )
-    assert np.allclose(
-        updated["F213"], target["F213"] * 100
-    )
+    assert np.allclose(updated["F213"], target["F213"] * 100)
