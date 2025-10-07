@@ -7,7 +7,6 @@ from roman_photoz.update_romanisim_catalog_fluxes import (
     update_fluxes,
 )
 
-
 if __name__ == "__main__":
 
     def parse_args():
