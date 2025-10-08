@@ -76,7 +76,7 @@ romanisim_input_catalog.ecsv --flux-catalog roman_simulated_catalog.parquet
 
 ## 10. Run roman-photoz
 
-- **Command:** `find 270*_cat.parquet | xargs -I{} -P8 -n1 roman-photoz --input-path . --input-filename {} --output-path . --output-filename {}.photoz.parquet`  # we should update this to put the photoz information in the input multiband catalogs
+- **Command:** `find 270*_cat.parquet | xargs -I{} -P8 -n1 roman-photoz --input-path . --input-filename {} --output-path . --output-filename {}.photoz.parquet` # we should update this to put the photoz information in the input multiband catalogs
 - **Description:** Runs the Roman Photo-z pipeline on the generated catalog to
   estimate photometric redshifts.
 
