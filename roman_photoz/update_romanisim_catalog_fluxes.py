@@ -46,30 +46,10 @@ def njy_to_mgy(flux):
     return flux.to(u.mgy, zero_point_flux)
 
 
-def scale_flux(flux, scaling_factor=None):
-    """
-    Scale the input flux by a given scaling factor.
-
-    Parameters
-    ----------
-    flux : Quantity or array-like
-        Flux value(s) to scale.
-    scaling_factor : np.ndarray, optional
-        Factor(s) to scale the flux by (default is an array of ones).
-
-    Returns
-    -------
-    Quantity or array-like
-        Scaled flux value(s).
-    """
-    scaling_factor = np.ones_like(flux) if scaling_factor is None else scaling_factor
-    return flux * scaling_factor
-
-
 def update_fluxes(
     target_catalog: Table,
     flux_catalog: Table,
-    apply_scaling: bool = False,
+    apply_scaling: bool = True,
     ref_filter: str = "F213",
 ) -> Table:
     """
@@ -99,8 +79,6 @@ def update_fluxes(
             "when you need the catalog returned instead of saved to file."
         )
 
-    fudge_factor = 100
-
     # Set reference filter for flux scaling
     ref_filter = ref_filter.upper()
     # Get romanisim fluxes in mgy
@@ -110,7 +88,7 @@ def update_fluxes(
         njy_to_mgy(flux_catalog[f"segment_{ref_filter.lower()}_flux"])
     )
     # Determine scaling factor if requested
-    scaling_factor = ref_target_vals / ref_flux_vals if apply_scaling else None
+    scaling_factor = ref_target_vals / ref_flux_vals if apply_scaling else 1
 
     filter_list = get_roman_filter_list(uppercase=True)
 
@@ -120,18 +98,14 @@ def update_fluxes(
     for colname in filter_list:
         if colname in updated_catalog.colnames:
             if colname == ref_filter:
-                updated_catalog[colname] = target_catalog[ref_filter] * fudge_factor
+                # keep the flux from target catalog in the ref_filter
+                updated_catalog[colname] = target_catalog[ref_filter]
             else:
                 fluxname = f"segment_{colname.lower()}_flux"
                 # convert from nJy (Roman) to maggies (romanisim_input_catalog)
-                converted_flux = njy_to_mgy(flux_catalog[fluxname]) * fudge_factor
+                converted_flux = njy_to_mgy(flux_catalog[fluxname])
                 # scale fluxes based on reference filter if requested
-                if apply_scaling:
-                    updated_catalog[colname] = scale_flux(
-                        converted_flux, scaling_factor
-                    )
-                else:
-                    updated_catalog[colname] = converted_flux
+                updated_catalog[colname] = converted_flux * scaling_factor
 
     # Add source ID from roman_simulated_catalog
     updated_catalog["label"] = flux_catalog["label"]
