@@ -188,6 +188,7 @@ class SimulatedCatalog:
         self,
         output_filename: str = DEFAULT_OUTPUT_CATALOG_FILENAME,
         output_path: str = "",
+        return_catalog: bool = False,
     ):
         """
         Create a simulated input catalog from the simulated data.
@@ -198,6 +199,20 @@ class SimulatedCatalog:
 
         + format the columns name to match Roman catalog's specifications
 
+        Parameters
+        ----------
+        output_filename : str, optional
+            The filename for the output catalog.
+        output_path : str, optional
+            The path where the catalog will be saved.
+        return_catalog : bool, optional
+            If True, return the catalog in memory instead of saving it to file.
+            Default is False to maintain backward compatibility (saves to file).
+
+        Returns
+        -------
+        Table or None
+            The final simulated catalog if return_catalog is True, otherwise None.
         """
         fname = self.lephare_config["GAL_LIB_OUT"]
         catalog_name = Path(LEPHAREWORK, "lib_mag", f"{fname}.dat").as_posix()
@@ -239,12 +254,16 @@ class SimulatedCatalog:
 
         final_catalog = Table(final_catalog)
 
-        save_catalog(
-            final_catalog,
-            output_filename=output_filename,
-            output_path=output_path,
-            overwrite=True,
-        )
+        if return_catalog:
+            return final_catalog
+        else:
+            save_catalog(
+                final_catalog,
+                output_filename=output_filename,
+                output_path=output_path,
+                overwrite=True,
+            )
+            return None
 
     def _abmag_to_njy(self, abmag):
         # convert AB magnitude to flux density in nJy
@@ -440,18 +459,36 @@ class SimulatedCatalog:
         self,
         output_path: str = "",
         output_filename: str = DEFAULT_OUTPUT_CATALOG_FILENAME,
+        return_catalog: bool = False,
     ):
         """
         Run the process to create the simulated catalog.
+
+        Parameters
+        ----------
+        output_path : str, optional
+            Path to save the output catalog (default: "").
+        output_filename : str, optional
+            Filename for the output catalog.
+        return_catalog : bool, optional
+            If True, return the catalog in memory instead of saving to file.
+            Default is False to maintain backward compatibility.
+
+        Returns
+        -------
+        Table or None
+            The simulated catalog if return_catalog is True, otherwise None.
         """
         self._create_filter_files()
         self._create_simulated_data()
-        self._create_simulated_input_catalog(
+        result = self._create_simulated_input_catalog(
             output_filename=output_filename,
             output_path=output_path,
+            return_catalog=return_catalog,
         )
 
         logger.info("DONE")
+        return result
 
 
 def main():
