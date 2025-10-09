@@ -91,6 +91,14 @@ def update_fluxes(
     Table
         The updated target catalog with new fluxes and copied label/redshift columns.
     """
+    # Check if flux_catalog is invalid to provide a better error message
+    if flux_catalog is None or len(flux_catalog) == 0:
+        raise ValueError(
+            "flux_catalog is invalid. This likely indicates that the SimulatedCatalog.process() "
+            "method did not return a catalog. Make sure to call process(return_catalog=True) "
+            "when you need the catalog returned instead of saved to file."
+        )
+
     fudge_factor = 100
 
     # Set reference filter for flux scaling
