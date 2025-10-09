@@ -49,7 +49,6 @@ def njy_to_mgy(flux):
 def update_fluxes(
     target_catalog: Table,
     flux_catalog: Table,
-    apply_scaling: bool = True,
     ref_filter: str = "F213",
 ) -> Table:
     """
@@ -61,8 +60,6 @@ def update_fluxes(
         The catalog whose fluxes will be updated.
     flux_catalog : Table
         The reference catalog providing new flux values.
-    apply_scaling : bool, optional
-        Whether to apply a scaling factor (float or array) based on the reference filter (default is no scaling).
     ref_filter : str, optional
         The reference filter to use for scaling (default is "F213").
 
@@ -88,7 +85,7 @@ def update_fluxes(
         njy_to_mgy(flux_catalog[f"segment_{ref_filter.lower()}_flux"])
     )
     # Determine scaling factor if requested
-    scaling_factor = ref_target_vals / ref_flux_vals if apply_scaling else 1
+    scaling_factor = ref_target_vals / ref_flux_vals
 
     filter_list = get_roman_filter_list(uppercase=True)
 
@@ -97,15 +94,11 @@ def update_fluxes(
 
     for colname in filter_list:
         if colname in updated_catalog.colnames:
-            if colname == ref_filter:
-                # keep the flux from target catalog in the ref_filter
-                updated_catalog[colname] = target_catalog[ref_filter]
-            else:
-                fluxname = f"segment_{colname.lower()}_flux"
-                # convert from nJy (Roman) to maggies (romanisim_input_catalog)
-                converted_flux = njy_to_mgy(flux_catalog[fluxname])
-                # scale fluxes based on reference filter if requested
-                updated_catalog[colname] = converted_flux * scaling_factor
+            fluxname = f"segment_{colname.lower()}_flux"
+            # convert from nJy (Roman) to maggies (romanisim_input_catalog)
+            converted_flux = njy_to_mgy(flux_catalog[fluxname])
+            # scale fluxes based on reference filter if requested
+            updated_catalog[colname] = converted_flux * scaling_factor
 
     # Add source ID from roman_simulated_catalog
     updated_catalog["label"] = flux_catalog["label"]

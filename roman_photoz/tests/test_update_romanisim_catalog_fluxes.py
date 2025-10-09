@@ -65,17 +65,8 @@ def test_update_fluxes(monkeypatch):
             "redshift_true": [0.1, 0.2],
         }
     )
-    # Test without scaling
-    updated = update_fluxes(target, flux, apply_scaling=False)
-    assert "label" in updated.colnames
-    assert "redshift_true" in updated.colnames
-    assert np.all(updated["label"] == [10, 20])
-    np.testing.assert_allclose(
-        np.asarray(updated["F184"]), njy_to_mgy(flux["segment_f184_flux"]).value
-    )
-    np.testing.assert_allclose(np.asarray(updated["F213"]), np.asarray(target["F213"]))
-    # Test with scaling
-    updated_scaled = update_fluxes(target, flux, apply_scaling=True, ref_filter="F213")
+
+    updated_scaled = update_fluxes(target, flux, ref_filter="F213")
     # Compute scaling factor
     ref_target_vals = np.asarray(target["F213"])
     ref_flux_vals = np.asarray(njy_to_mgy(flux["segment_f213_flux"]))
