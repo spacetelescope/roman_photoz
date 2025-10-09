@@ -55,12 +55,6 @@ if __name__ == "__main__":
             ),
         )
 
-        parser.add_argument(
-            "--apply-scaling",
-            action="store_true",
-            help="Whether to apply flux scaling based on reference filter.",
-        )
-
         return parser.parse_args()
 
     args = parse_args()
@@ -68,7 +62,6 @@ if __name__ == "__main__":
     romanisim_catalog_filename = args.target_catalog
     roman_photoz_catalog_filename = args.flux_catalog
     output_filename = args.output_filename
-    apply_scaling = args.apply_scaling
 
     romanisim_cat = Table.read(romanisim_catalog_filename, format="ascii.ecsv")
     if args.nobj is not None:
@@ -101,7 +94,6 @@ if __name__ == "__main__":
     update_fluxes_cat = update_fluxes(
         target_catalog=romanisim_cat,
         flux_catalog=rpz_cat,
-        apply_scaling=args.apply_scaling,
     )
     update_fluxes_cat.write(output_filename, format="ascii.ecsv", overwrite=True)
 
