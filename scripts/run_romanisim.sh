@@ -11,7 +11,6 @@ for filter in $@; do
     --catalog "romanisim_input_catalog_fluxes_updated.ecsv" \
     --stpsf \
     --usecrds \
-    --ma_table_number 109 \
     --date 2027-06-01T00:00:00 \
     --rng_seed 1 \
     --drop-extra-dq \
