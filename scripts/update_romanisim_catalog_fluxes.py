@@ -1,56 +1,23 @@
 import numpy as np
-from astropy import units as u
 from astropy.table import Table
 
-
-def create_random_catalog(table: Table, n: int, seed: int = 13):
-    """
-    Select n rows from table, with replacement.  Optionally set a seed for reproducibility.
-    """
-    rng = np.random.default_rng(seed)
-    idx = rng.integers(0, len(table) - 1, size=n)
-
-    return table[idx]
-
-
-def njy_to_mgy(flux):
-    zero_point_flux = u.zero_point_flux(3631 * u.Jy)  # 1 maggy = 3631 Jy
-    return flux.to(u.mgy, zero_point_flux)
-
-
-def update_fluxes(target_catalog: Table, flux_catalog: Table) -> Table:
-    fudge_factor = 100
-    # LePhare catalog magnitudes seem to peak out at an absolute galaxy magnitude of -15
-    # or so, while an L* galaxy should be more like -21.
-    # we artificially brighten by a factor of 100.
-    # need to figure out what's the issue here.
-
-    for colname in target_catalog.colnames:
-        if colname not in [
-            "F062",
-            "F087",
-            "F106",
-            "F129",
-            "F158",
-            "F184",
-            "F213",
-            "F146",
-        ]:
-            continue
-        fluxname = f"segment_{colname.lower()}_flux"
-        # convert from nJy (Roman  to maggies (romanisim_input_catalog)
-        target_catalog[colname] = njy_to_mgy(flux_catalog[fluxname]) * fudge_factor
-
-    # Add source ID from roman_simulated_catalog
-    target_catalog["label"] = flux_catalog["label"]
-    target_catalog["redshift_true"] = flux_catalog["redshift_true"]
-
-    return target_catalog
-
+from roman_photoz.update_romanisim_catalog_fluxes import (
+    create_random_catalog,
+    njy_to_mgy,
+    update_fluxes,
+)
 
 if __name__ == "__main__":
 
     def parse_args():
+        """
+        Parse command-line arguments for the script.
+
+        Returns
+        -------
+        argparse.Namespace
+            Parsed arguments.
+        """
         import argparse
 
         parser = argparse.ArgumentParser(
@@ -107,9 +74,10 @@ if __name__ == "__main__":
         romanisim_cat = romanisim_cat[
             rng.choice(len(romanisim_cat), args.nobj, replace=False)
         ]
+    # roman_photoz_catalog fluxes are in nJy
     rpz_cat = Table.read(roman_photoz_catalog_filename, format="parquet")
-    # trim anything that is impossibly bright or faint
-    # ugly here that we have a lot of different kinds of magnitudes now
+    # create an array of minimum magnitudes across all selected flux columns
+    # (this will be used as a boolean mask to filter out invalid objects)
     minmag = np.min(
         [
             -2.5 * np.log10(njy_to_mgy(rpz_cat[x]).value)
@@ -118,12 +86,15 @@ if __name__ == "__main__":
         ],
         axis=0,
     )
+    # Create a filter mask to filter out objects outside the valid magnitude range
     rpz_cat = rpz_cat[(minmag > 0) & (minmag < 33)]
+    # create a random catalog from rpz_cat with the same number of rows as romanisim_cat
     rpz_cat = create_random_catalog(table=rpz_cat, n=len(romanisim_cat))
 
     update_fluxes_cat = update_fluxes(
-        target_catalog=romanisim_cat, flux_catalog=rpz_cat
+        target_catalog=romanisim_cat,
+        flux_catalog=rpz_cat,
     )
     update_fluxes_cat.write(output_filename, format="ascii.ecsv", overwrite=True)
 
-    print("Done")
+    print("done")

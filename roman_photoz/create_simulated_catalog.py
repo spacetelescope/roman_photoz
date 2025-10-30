@@ -141,12 +141,17 @@ class SimulatedCatalog:
             f"Using filter library in {self.lephare_config['FILTER_REP']}/roman."
         )
 
-    def _create_simulated_data(self):
+    def _create_simulated_data(self, refresh_lib_mag: bool = False):
         """
         Generate simulated data using the LePhare configuration.
 
         This method prepares the LePhare environment and generates simulated data
         for galaxies, stars, and quasars based on the provided configuration.
+
+        Parameters
+        ----------
+        refresh_lib_mag : bool, optional
+            If True, regenerate the synthetic magnitudes even if they already exist. Default is False.
 
         Raises
         ------
@@ -157,10 +162,13 @@ class SimulatedCatalog:
         fname = self.lephare_config["GAL_LIB_OUT"]
         catalog_name = Path(LEPHAREWORK, "lib_mag", f"{fname}.dat").as_posix()
         if os.path.exists(catalog_name):
-            logger.info(
-                "LePhare synthetic magnitudes already exist, skipping creation."
-            )
-            return
+            if not refresh_lib_mag:
+                logger.info(
+                    "LePhare synthetic magnitudes already exist, skipping creation."
+                )
+                return
+            else:
+                logger.info("Regenerating LePhare synthetic magnitudes as requested...")
 
         star_overrides = {}
         qso_overrides = {
@@ -182,12 +190,13 @@ class SimulatedCatalog:
         )
 
         self.simulated_data_filename = gal_overrides.get("GAL_LIB_OUT")
-        logger.info("Simulated data generated successfully")
+        logger.info(f"Simulated data generated successfully: {catalog_name}")
 
     def _create_simulated_input_catalog(
         self,
         output_filename: str = DEFAULT_OUTPUT_CATALOG_FILENAME,
         output_path: str = "",
+        return_catalog: bool = False,
     ):
         """
         Create a simulated input catalog from the simulated data.
@@ -198,6 +207,20 @@ class SimulatedCatalog:
 
         + format the columns name to match Roman catalog's specifications
 
+        Parameters
+        ----------
+        output_filename : str, optional
+            The filename for the output catalog.
+        output_path : str, optional
+            The path where the catalog will be saved.
+        return_catalog : bool, optional
+            If True, return the catalog in memory instead of saving it to file.
+            Default is False to maintain backward compatibility (saves to file).
+
+        Returns
+        -------
+        Table or None
+            The final simulated catalog if return_catalog is True, otherwise None.
         """
         fname = self.lephare_config["GAL_LIB_OUT"]
         catalog_name = Path(LEPHAREWORK, "lib_mag", f"{fname}.dat").as_posix()
@@ -239,12 +262,16 @@ class SimulatedCatalog:
 
         final_catalog = Table(final_catalog)
 
-        save_catalog(
-            final_catalog,
-            output_filename=output_filename,
-            output_path=output_path,
-            overwrite=True,
-        )
+        if return_catalog:
+            return final_catalog
+        else:
+            save_catalog(
+                final_catalog,
+                output_filename=output_filename,
+                output_path=output_path,
+                overwrite=True,
+            )
+            return None
 
     def _abmag_to_njy(self, abmag):
         # convert AB magnitude to flux density in nJy
@@ -440,18 +467,37 @@ class SimulatedCatalog:
         self,
         output_path: str = "",
         output_filename: str = DEFAULT_OUTPUT_CATALOG_FILENAME,
+        return_catalog: bool = False,
+        refresh_lib_mag: bool = False,
     ):
         """
         Run the process to create the simulated catalog.
+
+        Parameters
+        ----------
+        output_path : str, optional
+            Path to save the output catalog (default: "").
+        output_filename : str, optional
+            Filename for the output catalog.
+        return_catalog : bool, optional
+            If True, return the catalog in memory instead of saving to file.
+            Default is False to maintain backward compatibility.
+
+        Returns
+        -------
+        Table or None
+            The simulated catalog if return_catalog is True, otherwise None.
         """
         self._create_filter_files()
-        self._create_simulated_data()
-        self._create_simulated_input_catalog(
+        self._create_simulated_data(refresh_lib_mag=refresh_lib_mag)
+        result = self._create_simulated_input_catalog(
             output_filename=output_filename,
             output_path=output_path,
+            return_catalog=return_catalog,
         )
 
         logger.info("DONE")
+        return result
 
 
 def main():
@@ -480,14 +526,22 @@ def main():
         parser.add_argument(
             "--mag-noise", type=float, default=0, help="Add noise to the measurements."
         )
-
+        parser.add_argument(
+            "--refresh-lib-mag",
+            action="store_true",
+            help="Refresh the lib_mag folder by regenerating the synthetic magnitudes.",
+        )
         return parser.parse_args()
 
     args = parse_args()
 
     logger.info("Starting simulated catalog creation...")
-    simulated_catalog = SimulatedCatalog(args.nobj, mag_noise=args.mag_noise)
-    simulated_catalog.process(args.output_path, args.output_filename)
+    simulated_catalog = SimulatedCatalog(nobj=args.nobj, mag_noise=args.mag_noise)
+    simulated_catalog.process(
+        output_path=args.output_path,
+        output_filename=args.output_filename,
+        refresh_lib_mag=args.refresh_lib_mag,
+    )
     logger.info("Simulated catalog creation completed successfully")
 
 
