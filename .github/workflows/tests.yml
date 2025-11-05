@@ -29,6 +29,9 @@ jobs:
       libraries: |
         apt:
           - libopenblas-dev
+          - libfftw3-dev
+        brew:
+          - fftw
       envs: |
         - linux: py311-xdist
         - linux: py312-xdist
