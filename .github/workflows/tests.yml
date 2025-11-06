@@ -26,15 +26,10 @@ jobs:
   test:
     uses: OpenAstronomy/github-actions-workflows/.github/workflows/tox.yml@28e947497bed4d6ec3fa1d66d198e95a1d17bc63 # v2.2.1
     with:
-      libraries: |
-        apt:
-          - libopenblas-dev
-          - libfftw3-dev
-        brew:
-          - fftw
       envs: |
+        - linux: check-dependencies
+          python-version: '3.13'
         - linux: py311-xdist
         - linux: py312-xdist
-        - linux: py313-cov-xdist
-          coverage: codecov
+        - linux: py313-xdist
         - macos: py313-xdist
