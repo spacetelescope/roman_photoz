@@ -34,7 +34,7 @@ docs = [
   "myst_parser",
 ]
 test = [
-  "pytest >=8.0.0",
+  "pytest>=9.0",
   "pytest-cov",
   "romancal",          # needed by conftest.py
   "coverage",          # used in GitHub Actions
@@ -71,8 +71,8 @@ zip-safe = false
   "**/*.asdf",
 ]
 
-[tool.pytest.ini_options]
-minversion = "4.6"
+[tool.pytest]
+minversion = "9.0"
 filterwarnings = ["error::ResourceWarning"]
 junit_family = "xunit2"
 log_cli_level = "info"

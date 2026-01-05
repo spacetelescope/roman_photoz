@@ -11,3 +11,5 @@ pyrightconfig.json
 roman_photoz.egg-info/
 .tox/
 .env
+
+roman_photoz.log
