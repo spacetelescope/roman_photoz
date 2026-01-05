@@ -34,10 +34,9 @@ docs = [
   "myst_parser",
 ]
 test = [
-  "pytest >=8.0.0",
+  "pytest>=9.0",
   "pytest-cov",
   "romancal @ git+https://github.com/spacetelescope/romancal.git@main",   # needed by conftest.py
-  "romanisim @ git+https://github.com/spacetelescope/romanisim.git@main", # needed by romancal's conftest
   "coverage",                                                             # used in GitHub Actions
   "ci-watson>=0.10.0",                                                    # provides --bigdata and --slow pytest flags
   "deepdiff>=8.6.0",                                                      # needed by regression tests
@@ -72,8 +71,8 @@ zip-safe = false
   "**/*.asdf",
 ]
 
-[tool.pytest.ini_options]
-minversion = "4.6"
+[tool.pytest]
+minversion = "9.0"
 filterwarnings = ["error::ResourceWarning"]
 junit_family = "xunit2"
 log_cli_level = "info"
