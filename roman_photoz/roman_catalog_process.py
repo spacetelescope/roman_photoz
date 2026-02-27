@@ -13,16 +13,16 @@ import lephare as lp
 import numpy as np
 from asdf import AsdfFile
 from astropy.table import Table
-from rail.core.stage import RailStage
+from rail.core import DataStore
 from rail.estimation.algos.lephare import LephareEstimator, LephareInformer
+from roman_datamodels import datamodels
 
 from roman_photoz.default_config_file import default_roman_config
 from roman_photoz.logger import logger
 from roman_photoz.roman_catalog_handler import RomanCatalogHandler
 from roman_photoz.utils import read_output_keys
 
-DS = RailStage.data_store
-DS.__class__.allow_overwrite = True
+DataStore.allow_overwrite = True
 
 LEPHAREDIR = Path(os.environ.get("LEPHAREDIR", lp.LEPHAREDIR))
 LEPHAREWORK = os.environ.get("LEPHAREWORK", (LEPHAREDIR / "work").as_posix())
@@ -190,6 +190,7 @@ class RomanCatalogProcess:
             gal_config=gal_overrides,
             qso_config=qso_overrides,
         )
+
         self.inform_stage.inform(self.data)
 
     def _create_estimator_stage(self):
@@ -278,6 +279,9 @@ class RomanCatalogProcess:
         tab_astro = Table.read(input_filename)
         meta = dict(tab.schema.metadata)
 
+        # Create a MultibandSourceCatalogModel instance to access RAD schema definitions
+        catalog_model = datamodels.MultibandSourceCatalogModel()
+
         namedict = {
             "photoz": "Z_BEST",
             "photoz_high68": "Z_BEST68_HIGH",
@@ -290,20 +294,40 @@ class RomanCatalogProcess:
             "photoz_sed": "MOD_BEST",
         }
         for newname, oldname in namedict.items():
+            # Get column definition from RAD schema
+            col_def = catalog_model.get_roman_photoz_column_definition(newname)
+            unit = col_def["unit"] if col_def else "none"
+            description = col_def["description"] if col_def else ""
+
+            # Create PyArrow field with metadata
+            arr = pa.array(self.estimated.data.ancil[oldname])
+            field = pa.field(
+                newname, arr.type, metadata={"unit": unit, "description": description}
+            )
+
             if newname not in tab.column_names:
-                tab = tab.append_column(
-                    newname, pa.array(self.estimated.data.ancil[oldname])
+                tab = tab.append_column(field, arr)
+            else:
+                tab = tab.set_column(tab.schema.get_field_index(newname), field, arr)
+
+            # Also add to Astropy table with metadata
+            tab_astro[newname] = self.estimated.data.ancil[oldname]
+            if col_def:
+                import astropy.units as u
+
+                tab_astro[newname].info.description = description
+                # Set unit - convert "none" to dimensionless_unscaled for Astropy
+                if col_def["unit"] == "none":
+                    tab_astro[newname].unit = u.dimensionless_unscaled
+                else:
+                    tab_astro[newname].unit = col_def["unit"]
+
+                logger.info(
+                    f"Applied RAD schema metadata to column '{newname}': "
+                    f"unit={col_def['unit']}, description={col_def['description']}"
                 )
             else:
-                tab = tab.set_column(
-                    tab.schema.get_field_index(newname),
-                    newname,
-                    pa.array(self.estimated.data.ancil[oldname]),
-                )
-            tab_astro[newname] = self.estimated.data.ancil[oldname]
-            # annoying to duplicate this, but we add to the "real"
-            # parquet table and also the astropy version to get the
-            # right astropy metadata
+                logger.warning(f"No RAD schema definition found for column '{newname}'")
 
         extra_astropy_metadata = astropy.table.meta.get_yaml_from_table(tab_astro)
         meta[b"table_meta_yaml"] = "\n".join(extra_astropy_metadata).encode("utf-8")
