@@ -295,7 +295,7 @@ class RomanCatalogProcess:
         }
         for newname, oldname in namedict.items():
             # Get column definition from RAD schema
-            col_def = catalog_model.get_roman_photoz_column_definition(newname)
+            col_def = catalog_model.get_column_definition(newname)
             unit = col_def["unit"] if col_def else "none"
             description = col_def["description"] if col_def else ""
 
