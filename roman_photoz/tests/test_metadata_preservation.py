@@ -1,8 +1,6 @@
-from pathlib import Path
 
 import pyarrow.parquet as pq
 from astropy.table import Table
-import pytest
 from roman_photoz.roman_catalog_process import RomanCatalogProcess
 from roman_photoz.create_simulated_catalog import SimulatedCatalog
 
