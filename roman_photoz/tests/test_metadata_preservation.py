@@ -4,6 +4,7 @@ import pyarrow.parquet as pq
 from astropy.table import Table
 import pytest
 from roman_photoz.roman_catalog_process import RomanCatalogProcess
+from roman_photoz.create_simulated_catalog import SimulatedCatalog
 
 PHOTOZ_COLS = [
     "photoz",
@@ -16,7 +17,6 @@ PHOTOZ_COLS = [
     "photoz_low99",
     "photoz_sed",
 ]
-MULTIBAND_TEST_CATALOG_PATHS = ["tests/data/r00001_r0_full_270p65x70y50_cat.parquet"]
 
 
 def extract_metadata(filename, backend):
@@ -100,20 +100,28 @@ def compare_metadata(pyarrow_meta, astropy_meta):
     return consistent
 
 
-@pytest.mark.parametrize("parquet_file", MULTIBAND_TEST_CATALOG_PATHS)
-def test_metadata_preservation(parquet_file, tmp_path):
-    basename = Path(parquet_file).stem
-    output_filename = f"{tmp_path}/test_result_{basename}.parquet"
+def test_metadata_preservation(tmp_path):
+    output_filename = "test_result.parquet"
+    simulated_catalog_filename = "simulated_catalog.parquet"
+
+    simulated_catalog = SimulatedCatalog(
+        nobj=100,
+        seed=42,
+    )
+    simulated_catalog.process(
+        output_path=tmp_path,
+        output_filename=simulated_catalog_filename,
+    )
 
     # catalog processing
     rcp = RomanCatalogProcess()
     rcp.process(
-        input_filename=parquet_file,
-        output_filename=output_filename,
+        input_filename=tmp_path / simulated_catalog_filename,
+        output_filename=tmp_path / output_filename,
     )
 
-    pyarrow_meta = extract_metadata(output_filename, "pyarrow")
-    astropy_meta = extract_metadata(output_filename, "astropy")
+    pyarrow_meta = extract_metadata(tmp_path / output_filename, "pyarrow")
+    astropy_meta = extract_metadata(tmp_path / output_filename, "astropy")
     pyarrow_count = sum(1 for m in pyarrow_meta.values() if m.get("found", False))
     astropy_count = sum(1 for m in astropy_meta.values() if m.get("found", False))
     consistent = compare_metadata(pyarrow_meta, astropy_meta)
