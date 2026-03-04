@@ -41,6 +41,7 @@ test = [
   "coverage",                                                           # used in GitHub Actions
   "ci-watson>=0.10.0",                                                  # provides --bigdata and --slow pytest flags
   "deepdiff>=8.6.0",                                                    # needed by regression tests
+  "openpyxl",                                                           # needed by regression tests
 ]
 dev = ["roman_photoz[docs,test]", "tox > 4", "pre-commit > 3"]
 
