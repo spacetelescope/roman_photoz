@@ -120,9 +120,12 @@ def test_metadata_preservation(tmp_path):
 
     pyarrow_meta = extract_metadata(tmp_path / output_filename, "pyarrow")
     astropy_meta = extract_metadata(tmp_path / output_filename, "astropy")
+
     pyarrow_count = sum(1 for m in pyarrow_meta.values() if m.get("found", False))
     astropy_count = sum(1 for m in astropy_meta.values() if m.get("found", False))
+
     consistent = compare_metadata(pyarrow_meta, astropy_meta)
+
     assert pyarrow_count == 9, "Not all photoz columns have metadata in PyArrow"
     assert astropy_count == 9, "Not all photoz columns have metadata in Astropy"
     assert consistent, "Metadata is not consistent between PyArrow and Astropy"
