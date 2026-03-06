@@ -252,14 +252,13 @@ class RomanCatalogProcess:
         if self.output_filename is None:
             logger.info("No output filename provided. Updating input file in place.")
             self._update_input(self.input_filename, save_results=True)
+            self.output_filename = self.input_filename
         elif self.output_filename is not None and self.output_format.lower() in [
             "parquet",
             "asdf",
         ]:
             if self.estimated is not None:
-                self._update_input(
-                    self.input_filename, save_results=False
-                )
+                self._update_input(self.input_filename, save_results=False)
             else:
                 logger.error("No results to save")
                 raise ValueError("No results to save.")
@@ -308,14 +307,14 @@ class RomanCatalogProcess:
         for newname, oldname in namedict.items():
             # Get column definition from RAD schema
             col_def = catalog_model.get_column_definition(newname)
-            unit = col_def["unit"] if col_def else "none"
-            description = col_def["description"] if col_def else ""
+
+            # get unit and description from the column definition, if available
+            # (since all the photoz columns are unitless, we will just set unit to None for now)
+            description = col_def.get("description", "")
 
             # Create PyArrow field with metadata
             arr = pa.array(self.estimated.data.ancil[oldname])
-            field = pa.field(
-                newname, arr.type, metadata={"unit": unit, "description": description}
-            )
+            field = pa.field(newname, arr.type, metadata={"description": description})
 
             if newname not in tab.column_names:
                 tab = tab.append_column(field, arr)
@@ -325,18 +324,11 @@ class RomanCatalogProcess:
             # Also add to Astropy table with metadata
             tab_astro[newname] = self.estimated.data.ancil[oldname]
             if col_def:
-                import astropy.units as u
-
                 tab_astro[newname].info.description = description
-                # Set unit - convert "none" to dimensionless_unscaled for Astropy
-                if col_def["unit"] == "none":
-                    tab_astro[newname].unit = u.dimensionless_unscaled
-                else:
-                    tab_astro[newname].unit = col_def["unit"]
 
                 logger.info(
                     f"Applied RAD schema metadata to column '{newname}': "
-                    f"unit={col_def['unit']}, description={col_def['description']}"
+                    f"description={description}"
                 )
             else:
                 logger.warning(f"No RAD schema definition found for column '{newname}'")
