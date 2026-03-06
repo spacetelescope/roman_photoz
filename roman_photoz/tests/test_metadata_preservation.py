@@ -1,4 +1,3 @@
-import pytest
 import pyarrow.parquet as pq
 from astropy.table import Table
 from roman_photoz.roman_catalog_process import RomanCatalogProcess
