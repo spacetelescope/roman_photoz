@@ -51,17 +51,22 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# --- Step 1: Create .env file ---
-echo "==> Creating .env file..."
-cat >"${SCRIPT_DIR}/.env" <<EOF
+# --- Step 1: Create or load .env file ---
+if [[ -f "${SCRIPT_DIR}/.env" ]]; then
+  echo "==> .env file already exists at ${SCRIPT_DIR}/.env — loading it."
+  set -a
+  source "${SCRIPT_DIR}/.env"
+  set +a
+else
+  echo "==> Creating .env file..."
+  cat >"${SCRIPT_DIR}/.env" <<EOF
 LEPHAREDIR=${LEPHARE_DATA}
 LEPHAREWORK=${LEPHARE_WORK}
 EOF
-echo "    Written to ${SCRIPT_DIR}/.env"
-
-# Export for the rest of this script
-export LEPHAREDIR="${LEPHARE_DATA}"
-export LEPHAREWORK="${LEPHARE_WORK}"
+  echo "    Written to ${SCRIPT_DIR}/.env"
+  export LEPHAREDIR="${LEPHARE_DATA}"
+  export LEPHAREWORK="${LEPHARE_WORK}"
+fi
 
 # Create directories
 mkdir -p "${LEPHAREDIR}" "${LEPHAREWORK}"
@@ -85,14 +90,29 @@ print('Auxiliary data download complete.')
 # --- Step 3: Create simulated catalog (also creates Roman filter files) ---
 echo "==> Creating simulated catalog and Roman filter files..."
 ${PYTHON_RUNNER} roman-photoz-create-simulated-catalog \
-    --nobj "${NOBJ}" \
-    --output-path "${LEPHAREWORK}" \
-    --output-filename "${SIMULATED_CATALOG_FILENAME}"
+  --nobj "${NOBJ}" \
+  --output-path "${LEPHAREWORK}" \
+  --output-filename "${SIMULATED_CATALOG_FILENAME}"
 
 CATALOG_PATH="${LEPHAREWORK}/${SIMULATED_CATALOG_FILENAME}"
 echo "    Simulated catalog: ${CATALOG_PATH}"
 
 # --- Step 4: Run the informer stage ---
+# Remove stale informer artifacts to ensure a clean build.
+# The model pickle stores an absolute run_dir path from the original
+# informer run; if it's stale, the estimator will look in the wrong place.
+MODEL_PICKLE="${LEPHAREWORK}/roman_model.pkl"
+if [[ -f "${MODEL_PICKLE}" ]]; then
+    echo "==> Removing stale model pickle: ${MODEL_PICKLE}"
+    rm -f "${MODEL_PICKLE}"
+fi
+# LephareInformer creates its run directory at $LEPHAREWORK/../inform_roman
+INFORMER_RUN_DIR="$(cd "${LEPHAREWORK}/.." && pwd)/inform_roman"
+if [[ -d "${INFORMER_RUN_DIR}" ]]; then
+    echo "==> Removing stale informer run directory: ${INFORMER_RUN_DIR}"
+    rm -rf "${INFORMER_RUN_DIR}"
+fi
+
 echo "==> Running informer + estimator stage..."
 ${PYTHON_RUNNER} roman-photoz --input-filename "${CATALOG_PATH}"
 echo "    Model written to: ${LEPHAREDIR}/roman_model.pkl"
@@ -104,7 +124,7 @@ echo "==> Cleaning up LEPHAREDIR (keeping only opa/, ext/, alloutputkeys.txt)...
 for item in "${LEPHAREDIR}"/*; do
   name="$(basename "${item}")"
   case "${name}" in
-  opa | ext | alloutputkeys.txt)
+  opa | ext | vega | alloutputkeys.txt)
     echo "    Keeping: ${name}"
     ;;
   *)
