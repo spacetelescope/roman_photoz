@@ -323,15 +323,12 @@ class RomanCatalogProcess:
 
             # Also add to Astropy table with metadata
             tab_astro[newname] = self.estimated.data.ancil[oldname]
-            if col_def:
-                tab_astro[newname].info.description = description
+            tab_astro[newname].info.description = description
 
-                logger.info(
-                    f"Applied RAD schema metadata to column '{newname}': "
-                    f"description={description}"
-                )
-            else:
-                logger.warning(f"No RAD schema definition found for column '{newname}'")
+            logger.info(
+                f"Applied RAD schema metadata to column '{newname}': "
+                f"description={description}"
+            )
 
         extra_astropy_metadata = astropy.table.meta.get_yaml_from_table(tab_astro)
         meta[b"table_meta_yaml"] = "\n".join(extra_astropy_metadata).encode("utf-8")
