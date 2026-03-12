@@ -11,7 +11,7 @@ import lephare as lp
 import numpy as np
 from astropy.table import Table
 from numpy.lib import recfunctions as rfn
-from rail.core.stage import RailStage
+from rail.core import DataStore
 
 from roman_photoz import create_roman_filters
 from roman_photoz.default_config_file import default_roman_config
@@ -20,8 +20,7 @@ from roman_photoz.utils import get_roman_filter_list, save_catalog
 
 ROMAN_DEFAULT_CONFIG = default_roman_config
 
-DS = RailStage.data_store
-DS.__class__.allow_overwrite = True
+DataStore.allow_overwrite = True
 
 LEPHAREDIR = os.environ.get("LEPHAREDIR", lp.LEPHAREDIR)
 LEPHAREWORK = os.environ.get(
@@ -57,7 +56,7 @@ class SimulatedCatalog:
         Placeholder for simulated data.
     """
 
-    def __init__(self, nobj: int = 1000, mag_noise: float = 0.1):
+    def __init__(self, nobj: int = 1000, mag_noise: float = 0.1, seed=None):
         """
         Initializes the SimulatedCatalog class.
         """
@@ -74,6 +73,7 @@ class SimulatedCatalog:
         self._roman_catalog_template = self._read_roman_template_catalog()
         self.filter_list = get_roman_filter_list()
         self.mag_noise = mag_noise
+        self.seed = seed
 
     def _create_column_names(self):
         colnames_list = []
@@ -197,6 +197,7 @@ class SimulatedCatalog:
         output_filename: str = DEFAULT_OUTPUT_CATALOG_FILENAME,
         output_path: str = "",
         return_catalog: bool = False,
+        seed=None,
     ):
         """
         Create a simulated input catalog from the simulated data.
@@ -457,7 +458,7 @@ class SimulatedCatalog:
                     f"Requested {num_lines} lines, but only {total_lines} lines are available."
                 )
 
-            rng = np.random.default_rng()
+            rng = np.random.default_rng(seed=self.seed)
             random_indices = rng.choice(total_lines, num_lines, replace=False)
             return self.simulated_data[random_indices]
         else:
@@ -531,12 +532,22 @@ def main():
             action="store_true",
             help="Refresh the lib_mag folder by regenerating the synthetic magnitudes.",
         )
+        parser.add_argument(
+            "--seed",
+            type=int,
+            default=None,
+            help="Seed for the random number generator used in picking random lines and adding noise (default: None).",
+        )
         return parser.parse_args()
 
     args = parse_args()
 
     logger.info("Starting simulated catalog creation...")
-    simulated_catalog = SimulatedCatalog(nobj=args.nobj, mag_noise=args.mag_noise)
+    simulated_catalog = SimulatedCatalog(
+        nobj=args.nobj,
+        mag_noise=args.mag_noise,
+        seed=args.seed,
+    )
     simulated_catalog.process(
         output_path=args.output_path,
         output_filename=args.output_filename,
