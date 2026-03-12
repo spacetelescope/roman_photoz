@@ -19,9 +19,8 @@ dependencies = [
   "pandas[excel]",
   "pz-rail >=1.0.0",  # Pin to at least 1.0.0 for stable 'main_store' API
   "pz-rail-lephare",
-  "requests >=2.26",
+  "requests",
   "roman_datamodels",
-  "urllib3 < 2.0.0",  # Fix RequestsDependencyWarning
 ]
 license-files = ["LICENSE"]
 dynamic = ["version"]
