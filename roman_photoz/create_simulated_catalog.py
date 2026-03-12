@@ -458,11 +458,7 @@ class SimulatedCatalog:
                     f"Requested {num_lines} lines, but only {total_lines} lines are available."
                 )
 
-            rng = (
-                np.random.default_rng()
-                if self.seed is None
-                else np.random.default_rng(seed=self.seed)
-            )
+            rng = np.random.default_rng(seed=self.seed)
             random_indices = rng.choice(total_lines, num_lines, replace=False)
             return self.simulated_data[random_indices]
         else:
