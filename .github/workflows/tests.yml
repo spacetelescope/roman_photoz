@@ -29,3 +29,5 @@ jobs:
       envs: |
         - linux: py311-xdist
         - linux: py312-xdist
+        - linux: py313-xdist
+        - linux: py3-xdist
