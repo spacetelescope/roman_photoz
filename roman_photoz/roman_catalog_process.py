@@ -178,21 +178,26 @@ class RomanCatalogProcess:
             "EXTINC_LAW": "SB_calzetti.dat",
         }
 
+        lephare_stage_config = {f"lephare.{k}": v for k, v in self.config.items()}
+        star_stage_config = {f"star.{k}": v for k, v in star_overrides.items()}
+        gal_stage_config = {f"gal.{k}": v for k, v in gal_overrides.items()}
+        qso_stage_config = {f"qso.{k}": v for k, v in qso_overrides.items()}
+
         self.inform_stage = LephareInformer.make_stage(
             name="inform_roman",
             nondetect_val=np.nan,
             model=self.informer_model_path,
             hdf5_groupname="",
-            lephare_config=self.config,
             bands=self.flux_cols,
             err_bands=self.flux_err_cols,
             ref_band=self.flux_cols[0],
             zmin=zmin,
             zmax=zmax,
             nzbins=nzbins,
-            star_config=star_overrides,
-            gal_config=gal_overrides,
-            qso_config=qso_overrides,
+            **lephare_stage_config,
+            **star_stage_config,
+            **gal_stage_config,
+            **qso_stage_config,
         )
 
         self.inform_stage.inform(self.data)
@@ -230,8 +235,8 @@ class RomanCatalogProcess:
             err_bands=self.flux_err_cols,
             ref_band=self.flux_cols[0],
             output_keys=self.default_roman_output_keys,
-            lephare_config=self.config,
             use_inform_offsets=False,
+            **{f"lephare.{k}": v for k, v in self.config.items()},
         )
 
         # dh = estimate_lephare.add_data('input', self.data)

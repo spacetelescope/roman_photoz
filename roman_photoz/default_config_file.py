@@ -32,7 +32,7 @@ default_roman_config = {
     "FILTER_FILE": "filter_roman",
     "MAGTYPE": "AB",
     "ZGRID_TYPE": "0",
-    "Z_STEP": "0.04,0.,4.0",
+    "Z_STEP": "0.08,0.,8.0",
     "COSMOLOGY": "70,0.3,0.7",
     "MOD_EXTINC": "18,26,26,33,26,33,26,33",
     "EB_V": "0.01,0.05,0.1,0.15,0.2,0.25,0.3,0.35,0.4,0.5",

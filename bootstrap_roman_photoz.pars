@@ -1,0 +1,37 @@
+# Canonical bootstrap contract for roman_photoz.
+# Edit this file, then run:
+#   bash bootstrap_roman_photoz.sh --pars-file ./bootstrap_roman_photoz.pars
+
+PARS_VERSION=1
+
+# Root used to derive LEPHAREDIR and LEPHAREWORK.
+# Relative paths are resolved from the repository root.
+DATA_ROOT=.
+
+# Number of simulated objects used when building the model.
+NOBJ=1000
+
+# Filename created under LEPHAREWORK during model build.
+SIMULATED_CATALOG_FILENAME=roman_simulated_catalog.parquet
+
+# true/false
+BUILD_MODEL=true
+
+# Cleanup mode:
+#   trimmed = remove intermediate files and trim LEPHAREDIR to estimator essentials
+#   full    = remove intermediate files but keep full LEPHAREDIR contents
+#   none    = keep all intermediate files and LEPHAREDIR contents
+CLEANUP_MODE=full
+
+# true/false
+FORCE_REFRESH=false
+
+# true/false
+VERIFY_ASSETS=true
+
+# Optional overrides:
+# LEPHAREDIR=/absolute/path/to/lephare_data
+# LEPHAREWORK=/absolute/path/to/lephare_work
+# INFORMER_MODEL_PATH=/absolute/path/to/model/dir
+# ENV_FILE=.env
+# PYTHON_RUNNER=uv run
