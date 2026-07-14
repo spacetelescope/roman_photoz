@@ -66,7 +66,7 @@ source ./.env && export LEPHAREDIR LEPHAREWORK INFORMER_MODEL_PATH
 ### 5. Create a simulated input catalog (if you don't already have one)
 
 If you don't already have an input catalog, you can create a simulated
-one with the following command. The output catalog will be saved to 
+one with the following command. The output catalog will be saved to
 `$LEPHAREWORK/roman_photoz_simulated_catalog.parquet`.
 
 ```bash
@@ -80,7 +80,7 @@ uv run roman-photoz-create-simulated-catalog \
 
 ### 6. Run roman-photoz
 
-Assuming there is a folder named OUTPUT in the current working directory 
+Assuming there is a folder named OUTPUT in the current working directory
 where the updated catalog containing the redshift results will be saved to, run:
 
 ```bash

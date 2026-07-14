@@ -17,7 +17,7 @@ dependencies = [
   "lephare >=1.0.0rc0",
   "numpy >=2.0",
   "pandas[excel]",
-  "pz-rail >=1.0.0",  # Pin to at least 1.0.0 for stable 'main_store' API
+  "pz-rail >=1.0.0",    # Pin to at least 1.0.0 for stable 'main_store' API
   "pz-rail-lephare",
   "requests",
   "roman_datamodels",
