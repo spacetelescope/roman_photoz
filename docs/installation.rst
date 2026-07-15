@@ -41,6 +41,14 @@ by the Roman config, create a simulated catalog and Roman filter files,
 build the model (informer stage), trim ``LEPHAREDIR`` to the files needed by
 the estimator, and verify that the required artifacts are present:
 
+.. note::
+
+   ``roman-photoz --setup`` only needs to be run **once** per
+   ``LEPHAREDIR``/``LEPHAREWORK`` location -- it downloads the auxiliary
+   data and builds the informer model, which are then reused for all
+   subsequent ``roman-photoz`` runs. There's no need to run it again unless
+   you delete/change those directories.
+
 1. Set the environment variables (recommended). ``roman-photoz`` uses
    ``LEPHAREDIR`` and ``LEPHAREWORK`` to determine where to store the
    LePhare data and work directories:
@@ -55,6 +63,16 @@ the estimator, and verify that the required artifacts are present:
    the platform equivalent elsewhere) and prints a notice showing the full
    paths it chose. Setting the variables yourself gives you control over
    where these (potentially large) files are stored.
+
+   ``roman-photoz`` also looks for an ``INFORMER_MODEL_PATH`` environment
+   variable to determine where the informer model file (``roman_model.pkl``
+   by default) is read from/written to. It defaults to ``LEPHAREWORK`` if
+   not set, so you only need to set it explicitly if you want to read/store
+   the model somewhere else:
+
+   .. code-block:: bash
+
+      export INFORMER_MODEL_PATH=/path/to/model_dir
 
 2. Run:
 
