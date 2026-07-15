@@ -66,11 +66,34 @@ the estimator, and verify that the required artifacts are present:
 
    - ``--nobj N`` -- number of objects in the simulated catalog (default: 1000).
    - ``--simulated-catalog-filename FILE`` -- simulated catalog filename
-     (default: ``roman_simulated_catalog.parquet``).
+     (default: ``roman_photoz_simulated_catalog.parquet``).
 
-3. If you don't already have an input catalog, create a simulated one. The
-   output catalog will be saved to
-   ``$LEPHAREWORK/roman_photoz_simulated_catalog.parquet``:
+   This leaves a catalog behind at
+   ``$LEPHAREWORK/roman_photoz_simulated_catalog.parquet`` (it already has
+   redshift estimates added by setup's own model-building pass). This
+   catalog isn't meant to be your real input data -- it's a fallback you
+   can use in step 3 below if you don't have your own catalog yet (see
+   "Creating a fresh simulated catalog" below for another option).
+
+3. Run ``roman-photoz``. Assuming there is a folder named ``OUTPUT`` in the
+   current working directory where the updated catalog containing the
+   redshift results will be saved to:
+
+   .. code-block:: bash
+
+      roman-photoz \
+        --input-filename <path/to/your_catalog.parquet> \
+        --output-filename ./OUTPUT/<path/to/your_catalog.parquet>
+
+   ``--input-filename`` should point to your own input catalog. If you
+   don't have one, you can pass in the catalog created in step 2 instead:
+   ``$LEPHAREWORK/roman_photoz_simulated_catalog.parquet``.
+
+   **Creating a fresh simulated catalog (optional)**
+
+   If you'd rather not reuse the catalog from step 2 -- for example, you
+   want a different number of objects or different physical parameters --
+   generate a fresh one:
 
    .. code-block:: bash
 
@@ -80,13 +103,3 @@ the estimator, and verify that the required artifacts are present:
 
    To change the physical parameters used to generate the simulated catalog
    (e.g. redshift range/step), edit ``roman_photoz/default_config_file.py``.
-
-4. Run ``roman-photoz``. Assuming there is a folder named ``OUTPUT`` in the
-   current working directory where the updated catalog containing the
-   redshift results will be saved to:
-
-   .. code-block:: bash
-
-      roman-photoz \
-        --input-filename $LEPHAREWORK/roman_photoz_simulated_catalog.parquet \
-        --output-filename ./OUTPUT/roman_photoz_simulated_catalog.parquet

@@ -324,6 +324,12 @@ class TestRunSetup:
 
         mock_simulated_catalog = MagicMock()
         mock_simulated_catalog_class.return_value = mock_simulated_catalog
+
+        def _fake_catalog_process(output_path, output_filename):
+            (lepharework / output_filename).write_text("")
+
+        mock_simulated_catalog.process.side_effect = _fake_catalog_process
+
         mock_rcp = MagicMock()
         mock_rcp_class.return_value = mock_rcp
 
@@ -339,6 +345,8 @@ class TestRunSetup:
         mock_simulated_catalog.process.assert_called_once_with(
             output_path=str(lepharework), output_filename="catalog.parquet"
         )
+        # the simulated catalog is kept around for reuse, not deleted
+        assert (lepharework / "catalog.parquet").exists()
 
     @patch("roman_photoz.roman_catalog_process.RomanCatalogProcess")
     @patch("roman_photoz.create_simulated_catalog.SimulatedCatalog")
@@ -361,13 +369,21 @@ class TestRunSetup:
 
         mock_simulated_catalog = MagicMock()
         mock_simulated_catalog_class.return_value = mock_simulated_catalog
+
+        def _fake_catalog_process(output_path, output_filename):
+            (lepharework / output_filename).write_text("")
+
+        mock_simulated_catalog.process.side_effect = _fake_catalog_process
+
         mock_rcp = MagicMock()
         mock_rcp_class.return_value = mock_rcp
 
         def _fake_process(input_filename):
             # Simulate RomanCatalogProcess.process() (re-)creating the model
-            # pickle after the stale one was removed by run_setup().
+            # pickle after the stale one was removed by run_setup(), and
+            # writing its log file alongside the catalog.
             (lepharework / "roman_model.pkl").write_text("")
+            (lepharework / "roman_photoz.log").write_text("")
 
         mock_rcp.process.side_effect = _fake_process
 
@@ -386,6 +402,11 @@ class TestRunSetup:
         # informer/estimator stage was run against the simulated catalog
         catalog_path = os.path.join(str(lepharework), "catalog.parquet")
         mock_rcp.process.assert_called_once_with(input_filename=catalog_path)
+
+        # the simulated catalog is kept around for reuse as an input catalog,
+        # while the intermediate log file is removed
+        assert os.path.exists(catalog_path)
+        assert not os.path.exists(os.path.join(str(lepharework), "roman_photoz.log"))
 
         # LEPHAREDIR was trimmed to estimator essentials
         remaining = {p.name for p in lepharedir.iterdir()}

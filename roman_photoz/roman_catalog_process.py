@@ -451,10 +451,10 @@ def _get_parser():
     parser.add_argument(
         "--simulated-catalog-filename",
         type=str,
-        default="roman_simulated_catalog.parquet",
+        default="roman_photoz_simulated_catalog.parquet",
         help=(
             "Simulated catalog filename used by --setup "
-            "(default: roman_simulated_catalog.parquet)."
+            "(default: roman_photoz_simulated_catalog.parquet)."
         ),
     )
     parser.add_argument(
@@ -503,7 +503,7 @@ def _get_parser():
     return parser
 
 
-def run_setup(nobj: int = 1000, simulated_catalog_filename: str = "roman_simulated_catalog.parquet"):
+def run_setup(nobj: int = 1000, simulated_catalog_filename: str = "roman_photoz_simulated_catalog.parquet"):
     """
     Bootstrap the LePhare data/model needed to run roman-photoz.
 
@@ -516,7 +516,9 @@ def run_setup(nobj: int = 1000, simulated_catalog_filename: str = "roman_simulat
     It then:
 
     1. Downloads the LePhare auxiliary data required by the Roman config.
-    2. Creates a simulated catalog and the Roman filter files.
+    2. Creates a simulated catalog and the Roman filter files (kept afterward
+       so it can be reused directly as an input catalog; it will already
+       contain the redshift-estimate columns added by step 3 below).
     3. Builds the informer model (removing any stale model/run directory first).
     4. Trims ``LEPHAREDIR`` down to the files needed by the estimator.
     5. Verifies that the required artifacts are present.
@@ -526,7 +528,7 @@ def run_setup(nobj: int = 1000, simulated_catalog_filename: str = "roman_simulat
     nobj : int, optional
         Number of objects in the simulated catalog (default: 1000).
     simulated_catalog_filename : str, optional
-        Filename for the simulated catalog (default: roman_simulated_catalog.parquet).
+        Filename for the simulated catalog (default: roman_photoz_simulated_catalog.parquet).
 
     Raises
     ------
@@ -581,9 +583,9 @@ def run_setup(nobj: int = 1000, simulated_catalog_filename: str = "roman_simulat
     logger.info(f"Model written to: {model_pickle}")
 
     logger.info("Removing intermediate files...")
-    for path in (catalog_path, os.path.join(lepharework, "roman_photoz.log")):
-        if os.path.exists(path):
-            os.remove(path)
+    log_path = os.path.join(lepharework, "roman_photoz.log")
+    if os.path.exists(log_path):
+        os.remove(log_path)
 
     logger.info("Cleaning up LEPHAREDIR (keeping only opa/, ext/, vega/, alloutputkeys.txt)...")
     keep = {"opa", "ext", "vega", "alloutputkeys.txt"}
@@ -618,6 +620,7 @@ def run_setup(nobj: int = 1000, simulated_catalog_filename: str = "roman_simulat
 
     logger.info("Setup complete.")
     logger.info(f"Model:       {model_pickle}")
+    logger.info(f"Catalog:     {catalog_path} (kept, reusable as an input catalog)")
     logger.info(f"LEPHAREDIR:  {lepharedir} (trimmed to estimator essentials)")
     logger.info(f"LEPHAREWORK: {lepharework}")
 
