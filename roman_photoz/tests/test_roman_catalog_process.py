@@ -78,6 +78,7 @@ class TestRomanCatalogProcess:
 
         # Setup mock args
         mock_args = MagicMock()
+        mock_args.setup = False
         mock_args.config_filename = ""
         mock_args.model_filename = "test_model.pkl"
         mock_args.input_path = "test_path"
@@ -111,6 +112,30 @@ class TestRomanCatalogProcess:
             fit_colname=mock_args.fit_colname,
             fit_err_colname=mock_args.fit_err_colname,
         )
+
+    @patch("argparse.ArgumentParser.parse_args")
+    @patch("roman_photoz.roman_catalog_process.run_setup")
+    @patch("roman_photoz.roman_catalog_process.RomanCatalogProcess")
+    def test_main_function_dispatches_to_setup(
+        self, mock_rcp_class, mock_run_setup, mock_parse_args
+    ):
+        """Test that main() calls run_setup() (and not the normal catalog
+        processing path) when --setup is passed."""
+        from roman_photoz.roman_catalog_process import main
+
+        mock_args = MagicMock()
+        mock_args.setup = True
+        mock_args.nobj = 123
+        mock_args.simulated_catalog_filename = "test_catalog.parquet"
+        mock_parse_args.return_value = mock_args
+
+        main()
+
+        mock_run_setup.assert_called_once_with(
+            nobj=mock_args.nobj,
+            simulated_catalog_filename=mock_args.simulated_catalog_filename,
+        )
+        mock_rcp_class.assert_not_called()
 
     @pytest.mark.parametrize(
         "model_exists, should_create_informer",
@@ -255,3 +280,143 @@ class TestRomanCatalogProcess:
                     monkeypatch.setenv(var, original_env[var])
                 elif var in os.environ:
                     monkeypatch.delenv(var)
+
+
+class TestRunSetup:
+    """Test class for the run_setup() bootstrap helper."""
+
+    def _make_lephare_assets(self, tmp_path):
+        """Pre-create the LEPHAREDIR/LEPHAREWORK assets that run_setup expects
+        to find after the (mocked) download/build steps have "run"."""
+        lepharedir = tmp_path / "lephare_data"
+        lepharework = tmp_path / "lephare_work"
+        (lepharedir / "opa").mkdir(parents=True)
+        (lepharedir / "ext").mkdir(parents=True)
+        (lepharedir / "vega").mkdir(parents=True)
+        (lepharedir / "unused_dir").mkdir(parents=True)
+        (lepharedir / "alloutputkeys.txt").write_text("")
+        lepharework.mkdir(parents=True)
+        (lepharework / "roman_model.pkl").write_text("")
+        return lepharedir, lepharework
+
+    @patch("roman_photoz.roman_catalog_process.RomanCatalogProcess")
+    @patch("roman_photoz.create_simulated_catalog.SimulatedCatalog")
+    @patch("lephare.data_retrieval.get_auxiliary_data")
+    def test_run_setup_falls_back_to_lephare_defaults_when_env_unset(
+        self,
+        mock_get_aux_data,
+        mock_simulated_catalog_class,
+        mock_rcp_class,
+        tmp_path,
+        monkeypatch,
+    ):
+        """run_setup() should fall back to the module-level LEPHAREDIR/
+        LEPHAREWORK defaults (which mirror lephare's own default cache
+        resolution) when the environment variables are not set."""
+        from roman_photoz import roman_catalog_process
+        from roman_photoz.roman_catalog_process import run_setup
+
+        lepharedir, lepharework = self._make_lephare_assets(tmp_path)
+        monkeypatch.delenv("LEPHAREDIR", raising=False)
+        monkeypatch.delenv("LEPHAREWORK", raising=False)
+        monkeypatch.setattr(roman_catalog_process, "LEPHAREDIR", lepharedir)
+        monkeypatch.setattr(roman_catalog_process, "LEPHAREWORK", str(lepharework))
+
+        mock_simulated_catalog = MagicMock()
+        mock_simulated_catalog_class.return_value = mock_simulated_catalog
+        mock_rcp = MagicMock()
+        mock_rcp_class.return_value = mock_rcp
+
+        def _fake_process(input_filename):
+            (lepharework / "roman_model.pkl").write_text("")
+
+        mock_rcp.process.side_effect = _fake_process
+
+        run_setup(nobj=7, simulated_catalog_filename="catalog.parquet")
+
+        mock_get_aux_data.assert_called_once()
+        assert mock_get_aux_data.call_args.kwargs["lephare_dir"] == str(lepharedir)
+        mock_simulated_catalog.process.assert_called_once_with(
+            output_path=str(lepharework), output_filename="catalog.parquet"
+        )
+
+    @patch("roman_photoz.roman_catalog_process.RomanCatalogProcess")
+    @patch("roman_photoz.create_simulated_catalog.SimulatedCatalog")
+    @patch("lephare.data_retrieval.get_auxiliary_data")
+    def test_run_setup_happy_path(
+        self,
+        mock_get_aux_data,
+        mock_simulated_catalog_class,
+        mock_rcp_class,
+        tmp_path,
+        monkeypatch,
+    ):
+        """run_setup() should download aux data, create a simulated catalog,
+        build the model, trim LEPHAREDIR, and verify required assets exist."""
+        from roman_photoz.roman_catalog_process import run_setup
+
+        lepharedir, lepharework = self._make_lephare_assets(tmp_path)
+        monkeypatch.setenv("LEPHAREDIR", str(lepharedir))
+        monkeypatch.setenv("LEPHAREWORK", str(lepharework))
+
+        mock_simulated_catalog = MagicMock()
+        mock_simulated_catalog_class.return_value = mock_simulated_catalog
+        mock_rcp = MagicMock()
+        mock_rcp_class.return_value = mock_rcp
+
+        def _fake_process(input_filename):
+            # Simulate RomanCatalogProcess.process() (re-)creating the model
+            # pickle after the stale one was removed by run_setup().
+            (lepharework / "roman_model.pkl").write_text("")
+
+        mock_rcp.process.side_effect = _fake_process
+
+        run_setup(nobj=42, simulated_catalog_filename="catalog.parquet")
+
+        # aux data was downloaded into LEPHAREDIR
+        mock_get_aux_data.assert_called_once()
+        assert mock_get_aux_data.call_args.kwargs["lephare_dir"] == str(lepharedir)
+
+        # simulated catalog was created with the requested nobj
+        mock_simulated_catalog_class.assert_called_once_with(nobj=42)
+        mock_simulated_catalog.process.assert_called_once_with(
+            output_path=str(lepharework), output_filename="catalog.parquet"
+        )
+
+        # informer/estimator stage was run against the simulated catalog
+        catalog_path = os.path.join(str(lepharework), "catalog.parquet")
+        mock_rcp.process.assert_called_once_with(input_filename=catalog_path)
+
+        # LEPHAREDIR was trimmed to estimator essentials
+        remaining = {p.name for p in lepharedir.iterdir()}
+        assert remaining == {"opa", "ext", "vega", "alloutputkeys.txt"}
+
+    @patch("roman_photoz.roman_catalog_process.RomanCatalogProcess")
+    @patch("roman_photoz.create_simulated_catalog.SimulatedCatalog")
+    @patch("lephare.data_retrieval.get_auxiliary_data")
+    def test_run_setup_raises_when_assets_missing(
+        self,
+        mock_get_aux_data,
+        mock_simulated_catalog_class,
+        mock_rcp_class,
+        tmp_path,
+        monkeypatch,
+    ):
+        """run_setup() should raise if required artifacts are missing after
+        the bootstrap steps have run."""
+        from roman_photoz.roman_catalog_process import run_setup
+
+        # Only create LEPHAREDIR/LEPHAREWORK, not the required sub-assets,
+        # so verification fails.
+        lepharedir = tmp_path / "lephare_data"
+        lepharework = tmp_path / "lephare_work"
+        lepharedir.mkdir()
+        lepharework.mkdir()
+        monkeypatch.setenv("LEPHAREDIR", str(lepharedir))
+        monkeypatch.setenv("LEPHAREWORK", str(lepharework))
+
+        mock_simulated_catalog_class.return_value = MagicMock()
+        mock_rcp_class.return_value = MagicMock()
+
+        with pytest.raises(RuntimeError, match="Bootstrap verification failed"):
+            run_setup()

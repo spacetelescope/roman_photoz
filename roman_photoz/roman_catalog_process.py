@@ -432,6 +432,32 @@ def _get_parser():
 
     parser = argparse.ArgumentParser(description="Process Roman catalog data.")
     parser.add_argument(
+        "--setup",
+        action="store_true",
+        help=(
+            "Bootstrap the LePhare data/model needed to run roman-photoz: "
+            "download the LePhare auxiliary data, create a simulated catalog, "
+            "build the informer model, trim LEPHAREDIR to estimator "
+            "essentials, and verify the required artifacts are present. "
+            "All other arguments below are ignored when --setup is used."
+        ),
+    )
+    parser.add_argument(
+        "--nobj",
+        type=int,
+        default=1000,
+        help="Number of objects in the simulated catalog used by --setup (default: 1000).",
+    )
+    parser.add_argument(
+        "--simulated-catalog-filename",
+        type=str,
+        default="roman_simulated_catalog.parquet",
+        help=(
+            "Simulated catalog filename used by --setup "
+            "(default: roman_simulated_catalog.parquet)."
+        ),
+    )
+    parser.add_argument(
         "--config-filename",
         type=str,
         default="",
@@ -477,6 +503,126 @@ def _get_parser():
     return parser
 
 
+def run_setup(nobj: int = 1000, simulated_catalog_filename: str = "roman_simulated_catalog.parquet"):
+    """
+    Bootstrap the LePhare data/model needed to run roman-photoz.
+
+    Uses the ``LEPHAREDIR`` and ``LEPHAREWORK`` environment variables to
+    determine where to store the LePhare data and work directories. If they
+    are not set, ``lephare`` falls back to its own default cache directories
+    under ``~/Library/Caches/lephare`` (or the platform equivalent) and
+    prints a notice to that effect; set these variables explicitly beforehand
+    if you want to control where the LePhare data/model files are stored.
+    It then:
+
+    1. Downloads the LePhare auxiliary data required by the Roman config.
+    2. Creates a simulated catalog and the Roman filter files.
+    3. Builds the informer model (removing any stale model/run directory first).
+    4. Trims ``LEPHAREDIR`` down to the files needed by the estimator.
+    5. Verifies that the required artifacts are present.
+
+    Parameters
+    ----------
+    nobj : int, optional
+        Number of objects in the simulated catalog (default: 1000).
+    simulated_catalog_filename : str, optional
+        Filename for the simulated catalog (default: roman_simulated_catalog.parquet).
+
+    Raises
+    ------
+    RuntimeError
+        If the required artifacts are missing after setup completes.
+    """
+    import shutil
+
+    from lephare.data_retrieval import get_auxiliary_data
+
+    from roman_photoz.create_simulated_catalog import SimulatedCatalog
+
+    lepharedir = os.environ.get("LEPHAREDIR", str(LEPHAREDIR))
+    lepharework = os.environ.get("LEPHAREWORK", LEPHAREWORK)
+
+    os.makedirs(lepharedir, exist_ok=True)
+    os.makedirs(lepharework, exist_ok=True)
+
+    logger.info("Downloading LePhare auxiliary data...")
+    get_auxiliary_data(
+        lephare_dir=lepharedir,
+        keymap=default_roman_config,
+        additional_files=[
+            "examples/COSMOS_MOD.list",  # needed for the simulated catalog
+        ],
+    )
+    logger.info("Auxiliary data download complete.")
+
+    logger.info("Creating simulated catalog and Roman filter files...")
+    SimulatedCatalog(nobj=nobj).process(
+        output_path=lepharework,
+        output_filename=simulated_catalog_filename,
+    )
+    catalog_path = os.path.join(lepharework, simulated_catalog_filename)
+    logger.info(f"Simulated catalog: {catalog_path}")
+
+    # Remove stale informer artifacts to ensure a clean build. The model
+    # pickle stores an absolute run_dir path from the original informer run;
+    # if it's stale, the estimator will look in the wrong place.
+    model_pickle = os.path.join(lepharework, "roman_model.pkl")
+    if os.path.exists(model_pickle):
+        logger.info(f"Removing stale model pickle: {model_pickle}")
+        os.remove(model_pickle)
+    # LephareInformer creates its run directory at $LEPHAREWORK/../inform_roman
+    informer_run_dir = os.path.join(os.path.dirname(lepharework), "inform_roman")
+    if os.path.isdir(informer_run_dir):
+        logger.info(f"Removing stale informer run directory: {informer_run_dir}")
+        shutil.rmtree(informer_run_dir)
+
+    logger.info("Running informer + estimator stage...")
+    RomanCatalogProcess().process(input_filename=catalog_path)
+    logger.info(f"Model written to: {model_pickle}")
+
+    logger.info("Removing intermediate files...")
+    for path in (catalog_path, os.path.join(lepharework, "roman_photoz.log")):
+        if os.path.exists(path):
+            os.remove(path)
+
+    logger.info("Cleaning up LEPHAREDIR (keeping only opa/, ext/, vega/, alloutputkeys.txt)...")
+    keep = {"opa", "ext", "vega", "alloutputkeys.txt"}
+    for entry in os.listdir(lepharedir):
+        if entry in keep:
+            logger.info(f"    Keeping: {entry}")
+            continue
+        logger.info(f"    Removing: {entry}")
+        entry_path = os.path.join(lepharedir, entry)
+        if os.path.isdir(entry_path):
+            shutil.rmtree(entry_path)
+        else:
+            os.remove(entry_path)
+
+    logger.info("Verifying required assets...")
+    missing = [
+        path
+        for path in (
+            os.path.join(lepharedir, "opa"),
+            os.path.join(lepharedir, "ext"),
+            os.path.join(lepharedir, "alloutputkeys.txt"),
+            model_pickle,
+        )
+        if not os.path.exists(path)
+    ]
+    if missing:
+        missing_list = "\n".join(f"  - {path}" for path in missing)
+        raise RuntimeError(
+            f"Bootstrap verification failed. Missing artifacts:\n{missing_list}"
+        )
+    logger.info("All required artifacts are present.")
+
+    logger.info("Setup complete.")
+    logger.info(f"Model:       {model_pickle}")
+    logger.info(f"LEPHAREDIR:  {lepharedir} (trimmed to estimator essentials)")
+    logger.info(f"LEPHAREWORK: {lepharework}")
+
+
+
 def main(argv=None):
     """
     Main function to process Roman catalog data.
@@ -484,6 +630,13 @@ def main(argv=None):
 
     parser = _get_parser()
     args = parser.parse_args(argv)
+
+    if args.setup:
+        run_setup(
+            nobj=args.nobj,
+            simulated_catalog_filename=args.simulated_catalog_filename,
+        )
+        return
 
     logger.info("Starting Roman catalog processing")
     rcp = RomanCatalogProcess(
