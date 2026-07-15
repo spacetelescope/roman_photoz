@@ -41,13 +41,7 @@ by the Roman config, create a simulated catalog and Roman filter files,
 build the model (informer stage), trim ``LEPHAREDIR`` to the files needed by
 the estimator, and verify that the required artifacts are present:
 
-.. note::
 
-   ``roman-photoz --setup`` only needs to be run **once** per
-   ``LEPHAREDIR``/``LEPHAREWORK`` location -- it downloads the auxiliary
-   data and builds the informer model, which are then reused for all
-   subsequent ``roman-photoz`` runs. There's no need to run it again unless
-   you delete/change those directories.
 
 1. Set the environment variables (recommended). ``roman-photoz`` uses
    ``LEPHAREDIR`` and ``LEPHAREWORK`` to determine where to store the
@@ -92,6 +86,14 @@ the estimator, and verify that the required artifacts are present:
    catalog isn't meant to be your real input data -- it's a fallback you
    can use in step 3 below if you don't have your own catalog yet (see
    "Creating a fresh simulated catalog" below for another option).
+
+   .. note::
+
+     ``roman-photoz --setup`` only needs to be run **once** per
+     ``LEPHAREDIR``/``LEPHAREWORK`` location -- it downloads the auxiliary
+     data and builds the informer model, which are then reused for all
+     subsequent ``roman-photoz`` runs. There's no need to run it again unless
+     you delete/change those directories.
 
 3. Run ``roman-photoz``. Assuming there is a folder named ``OUTPUT`` in the
    current working directory where the updated catalog containing the
