@@ -6,7 +6,6 @@ import tempfile
 from collections import OrderedDict
 from importlib.resources import files
 from pathlib import Path
-from typing import Optional, Union
 
 import astropy.table
 import lephare as lp
@@ -55,7 +54,7 @@ class RomanCatalogProcess:
 
     def __init__(
         self,
-        config_filename: Union[dict, str] = "",
+        config_filename: dict | str = "",
         model_filename: str = "roman_model.pkl",
     ):
         """
@@ -84,7 +83,7 @@ class RomanCatalogProcess:
         self.output_filename = None
         self.output_format = None
 
-    def _set_config_file(self, config_filename: Union[dict, str] = ""):
+    def _set_config_file(self, config_filename: dict | str = ""):
         """
         Set the configuration file.
 
@@ -344,7 +343,7 @@ class RomanCatalogProcess:
     def process(
         self,
         input_filename,
-        output_filename: Optional[str] = None,
+        output_filename: str | None = None,
         output_format: str = "parquet",
         fit_colname: str = "segment_{}_flux",
         fit_err_colname: str = "segment_{}_flux_err",

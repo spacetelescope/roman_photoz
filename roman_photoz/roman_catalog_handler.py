@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 from astropy.table import Table
@@ -124,7 +123,7 @@ class RomanCatalogHandler:
         logger.info("Catalog read successfully")
         return cat_array
 
-    def process(self, input_filename: Optional[str] = None) -> np.ndarray:
+    def process(self, input_filename: str | None = None) -> np.ndarray:
         """
         Process the catalog by reading and formatting it.
 

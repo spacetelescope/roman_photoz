@@ -1,7 +1,8 @@
 import pyarrow.parquet as pq
 from astropy.table import Table
-from roman_photoz.roman_catalog_process import RomanCatalogProcess
+
 from roman_photoz.create_simulated_catalog import SimulatedCatalog
+from roman_photoz.roman_catalog_process import RomanCatalogProcess
 
 PHOTOZ_COLS = [
     "photoz",
