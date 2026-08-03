@@ -26,7 +26,7 @@ default_roman_config = {
     "GAL_LIB_OUT": "GAL_COSMOS",
     "AGE_RANGE": "0.,15.e9",
     "FILTER_REP": f"{LEPHAREDIR}/filt",
-    "FILTER_LIST": "roman/roman_F062.pb,roman/roman_F087.pb,roman/roman_F106.pb,roman/roman_F129.pb,roman/roman_F146.pb,roman/roman_F158.pb,roman/roman_F184.pb,roman/roman_F213.pb",  # noqa: E501
+    "FILTER_LIST": "roman/roman_F062.pb,roman/roman_F087.pb,roman/roman_F106.pb,roman/roman_F129.pb,roman/roman_F146.pb,roman/roman_F158.pb,roman/roman_F184.pb,roman/roman_F213.pb",
     "TRANS_TYPE": "1",  # photon-counting filters
     "FILTER_CALIB": "0,0,0,0,0,0,0,0",
     "FILTER_FILE": "filter_roman",
@@ -50,7 +50,7 @@ default_roman_config = {
     "CAT_TYPE": "LONG",
     "GLB_CONTEXT": "0",
     "FORB_CONTEXT": "-1",
-    "ERR_SCALE": "0.02,0.02,0.02,0.02,0.02,0.02,0.02,0.02",  # noqa: E501
+    "ERR_SCALE": "0.02,0.02,0.02,0.02,0.02,0.02,0.02,0.02",
     "ERR_FACTOR": "1.5",
     "ADD_EMLINES": "0,10000",
     "ZPHOTLIB": "GAL_COSMOS,STAR_COSMOS,QSO_COSMOS",
