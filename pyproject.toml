@@ -92,17 +92,6 @@ line_length = 88
 line-length = 88
 force-exclude = "^/(\n  (\n      \\.eggs\n    | \\.git\n    | \\.pytest_cache\n    | \\.tox\n  )/\n)\n"
 
-[tool.ruff]
-line-length = 88
-
-[tool.ruff.lint]
-exclude = ["jdocs", ".tox", ".eggs", "build"]
-ignore = [
-  "E741", # ambiguous variable name
-  "F403", # unable to detect undefined names
-]
-extend-select = ["NPY"]
-
 [tool.cibuildwheel.macos]
 archs = ["x86_64", "arm64"]
 
