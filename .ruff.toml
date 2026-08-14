@@ -1,0 +1,17 @@
+line-length = 88
+
+[lint]
+select = [
+  "E4",
+  "E7",
+  "E9", # pycodestyle
+  "F",  # Pyflakes
+]
+extend-select = [
+  "NPY", # numpy specific
+]
+exclude = ["jdocs", ".tox", ".eggs", "build"]
+ignore = [
+  "E741", # ambiguous variable name
+  "F403", # unable to detect undefined names
+]
