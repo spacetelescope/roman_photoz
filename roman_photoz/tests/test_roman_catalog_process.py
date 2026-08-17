@@ -1,11 +1,18 @@
 import os
+import pickle
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 from astropy.table import Table
 
 from roman_photoz.default_config_file import default_roman_config
-from roman_photoz.roman_catalog_process import RomanCatalogProcess
+from roman_photoz.roman_catalog_process import (
+    DEFAULT_OUTPUT_KEYWORDS,
+    RomanCatalogProcess,
+    get_informer_run_dir,
+    load_portable_informer_model,
+)
 
 
 @pytest.fixture
@@ -203,6 +210,12 @@ class TestRomanCatalogProcess:
                 {"INFORMER_MODEL_PATH": "/another/mock/path"},
                 "/another/mock/path",
             ),
+            # INFORMER_MODEL_PATH may point directly at the pickle file
+            (
+                "roman_model.pkl",
+                {"INFORMER_MODEL_PATH": "/mock/informer/model/path/roman_model.pkl"},
+                "/mock/informer/model/path",
+            ),
             # Test with custom filenames and different INFORMER_MODEL_PATH values
             (
                 "custom_model.pkl",
@@ -235,10 +248,14 @@ class TestRomanCatalogProcess:
     ):
         """Test that informer_model_path property correctly combines path and filename.
 
+        Purpose: ensure model path resolution supports both directory and file
+        values for INFORMER_MODEL_PATH, and falls back to LEPHAREWORK.
+
         The test verifies:
-        1. Correct use of INFORMER_MODEL_PATH when set
-        2. Fallback to LEPHAREWORK when INFORMER_MODEL_PATH is not set
-        3. Proper path combination with different model filenames
+        1. Correct use of INFORMER_MODEL_PATH when set to a directory
+        2. Correct use of INFORMER_MODEL_PATH when set to the pickle file itself
+        3. Fallback to LEPHAREWORK when INFORMER_MODEL_PATH is not set
+        4. Proper path combination with different model filenames
         """
         # Save original environment variables
         original_env = {}
@@ -281,6 +298,102 @@ class TestRomanCatalogProcess:
                 elif var in os.environ:
                     monkeypatch.delenv(var)
 
+    def test_informer_run_dir_follows_lepharework(self, monkeypatch, tmp_path):
+        """Purpose: estimation must use the local sibling inform_roman tree."""
+        lepharework = tmp_path / "package" / "lephare_work"
+        lepharework.mkdir(parents=True)
+        monkeypatch.setenv("LEPHAREWORK", str(lepharework))
+
+        rcp = RomanCatalogProcess(config_filename=default_roman_config)
+        expected = str((lepharework.parent / "inform_roman").resolve())
+        assert rcp.informer_run_dir == expected
+        assert get_informer_run_dir(str(lepharework)) == expected
+
+    def test_load_portable_informer_model_rewrites_absolute_paths(self, tmp_path):
+        """Purpose: relocated pickles must not retain the original host paths."""
+        model_path = tmp_path / "roman_model.pkl"
+        old_run_dir = "/System/Volumes/Data/grp/roman/old/inform_roman"
+        old_filter_rep = "/grp/roman/old/lephare_data/filt"
+        old_para_out = "/Users/someone/roman_photoz/roman_photoz/data/default_roman_output.para"
+        with open(model_path, "wb") as handle:
+            pickle.dump(
+                {
+                    "run_dir": old_run_dir,
+                    "lephare_config": {
+                        "FILTER_REP": old_filter_rep,
+                        "PARA_OUT": old_para_out,
+                        "Z_STEP": "0.04,0.,4.0",
+                    },
+                    "offsets": [0.0],
+                },
+                handle,
+            )
+
+        new_run_dir = str(tmp_path / "inform_roman")
+
+        portable = load_portable_informer_model(str(model_path), run_dir=new_run_dir)
+
+        assert portable["run_dir"] == new_run_dir
+        assert portable["lephare_config"]["FILTER_REP"] == str(
+            Path(new_run_dir) / "filt"
+        )
+        assert portable["lephare_config"]["PARA_OUT"] == DEFAULT_OUTPUT_KEYWORDS
+        assert portable["lephare_config"]["Z_STEP"] == "0.04,0.,4.0"
+        assert portable["offsets"] == [0.0]
+
+    @patch("roman_photoz.roman_catalog_process.LephareEstimator")
+    def test_create_estimator_stage_uses_portable_model_and_local_run_dir(
+        self, mock_estimator, tmp_path, monkeypatch
+    ):
+        """Purpose: estimator must ignore baked-in absolute run_dir paths."""
+        package_root = tmp_path / "assets"
+        lepharework = package_root / "lephare_work"
+        lepharedir = package_root / "lephare_data"
+        inform_roman = package_root / "inform_roman"
+        lepharework.mkdir(parents=True)
+        lepharedir.mkdir(parents=True)
+        inform_roman.mkdir(parents=True)
+
+        model_path = lepharework / "roman_model.pkl"
+        with open(model_path, "wb") as handle:
+            pickle.dump(
+                {
+                    "run_dir": "/System/Volumes/Data/grp/roman/old/inform_roman",
+                    "lephare_config": {
+                        "FILTER_REP": "/grp/roman/old/lephare_data/filt",
+                        "PARA_OUT": "/Users/old/default_roman_output.para",
+                        "Z_STEP": "0.04,0.,4.0",
+                    },
+                    "offsets": None,
+                },
+                handle,
+            )
+
+        monkeypatch.setenv("LEPHAREWORK", str(lepharework))
+        monkeypatch.setenv("LEPHAREDIR", str(lepharedir))
+        monkeypatch.setenv("INFORMER_MODEL_PATH", str(lepharework))
+
+        mock_stage = MagicMock()
+        mock_estimator.make_stage.return_value = mock_stage
+
+        rcp = RomanCatalogProcess(config_filename=default_roman_config)
+        rcp.flux_cols = ["segment_f158_flux"]
+        rcp.flux_err_cols = ["segment_f158_flux_err"]
+        rcp.data = Table()
+
+        rcp._create_estimator_stage()
+
+        call_kwargs = mock_estimator.make_stage.call_args.kwargs
+        expected_run_dir = str(inform_roman.resolve())
+        assert call_kwargs["run_dir"] == expected_run_dir
+
+        model = call_kwargs["model"]
+        assert isinstance(model, dict)
+        assert model["run_dir"] == expected_run_dir
+        assert model["lephare_config"]["FILTER_REP"] == str(Path(expected_run_dir) / "filt")
+        assert model["lephare_config"]["PARA_OUT"] == DEFAULT_OUTPUT_KEYWORDS
+        mock_stage.estimate.assert_called_once_with(rcp.data)
+
 
 class TestRunSetup:
     """Test class for the run_setup() bootstrap helper."""
@@ -290,14 +403,26 @@ class TestRunSetup:
         to find after the (mocked) download/build steps have "run"."""
         lepharedir = tmp_path / "lephare_data"
         lepharework = tmp_path / "lephare_work"
+        inform_roman = tmp_path / "inform_roman"
         (lepharedir / "opa").mkdir(parents=True)
         (lepharedir / "ext").mkdir(parents=True)
         (lepharedir / "vega").mkdir(parents=True)
         (lepharedir / "unused_dir").mkdir(parents=True)
         (lepharedir / "alloutputkeys.txt").write_text("")
         lepharework.mkdir(parents=True)
-        (lepharework / "roman_model.pkl").write_text("")
-        return lepharedir, lepharework
+        (inform_roman / "lib_mag").mkdir(parents=True)
+        with open(lepharework / "roman_model.pkl", "wb") as handle:
+            pickle.dump(
+                {
+                    "run_dir": "/old/host/inform_roman",
+                    "lephare_config": {
+                        "FILTER_REP": "/old/host/lephare_data/filt",
+                        "PARA_OUT": "/old/host/default_roman_output.para",
+                    },
+                },
+                handle,
+            )
+        return lepharedir, lepharework, inform_roman
 
     @patch("roman_photoz.roman_catalog_process.RomanCatalogProcess")
     @patch("roman_photoz.create_simulated_catalog.SimulatedCatalog")
@@ -316,7 +441,7 @@ class TestRunSetup:
         from roman_photoz import roman_catalog_process
         from roman_photoz.roman_catalog_process import run_setup
 
-        lepharedir, lepharework = self._make_lephare_assets(tmp_path)
+        lepharedir, lepharework, inform_roman = self._make_lephare_assets(tmp_path)
         monkeypatch.delenv("LEPHAREDIR", raising=False)
         monkeypatch.delenv("LEPHAREWORK", raising=False)
         monkeypatch.setattr(roman_catalog_process, "LEPHAREDIR", lepharedir)
@@ -334,7 +459,18 @@ class TestRunSetup:
         mock_rcp_class.return_value = mock_rcp
 
         def _fake_process(input_filename):
-            (lepharework / "roman_model.pkl").write_text("")
+            with open(lepharework / "roman_model.pkl", "wb") as handle:
+                pickle.dump(
+                    {
+                        "run_dir": "/old/host/inform_roman",
+                        "lephare_config": {
+                            "FILTER_REP": "/old/host/lephare_data/filt",
+                            "PARA_OUT": "/old/host/default_roman_output.para",
+                        },
+                    },
+                    handle,
+                )
+            (inform_roman / "lib_mag").mkdir(parents=True, exist_ok=True)
 
         mock_rcp.process.side_effect = _fake_process
 
@@ -347,6 +483,9 @@ class TestRunSetup:
         )
         # the simulated catalog is kept around for reuse, not deleted
         assert (lepharework / "catalog.parquet").exists()
+        with open(lepharework / "roman_model.pkl", "rb") as handle:
+            model = pickle.load(handle)
+        assert model["run_dir"] == str(inform_roman.resolve())
 
     @patch("roman_photoz.roman_catalog_process.RomanCatalogProcess")
     @patch("roman_photoz.create_simulated_catalog.SimulatedCatalog")
@@ -363,7 +502,7 @@ class TestRunSetup:
         build the model, trim LEPHAREDIR, and verify required assets exist."""
         from roman_photoz.roman_catalog_process import run_setup
 
-        lepharedir, lepharework = self._make_lephare_assets(tmp_path)
+        lepharedir, lepharework, inform_roman = self._make_lephare_assets(tmp_path)
         monkeypatch.setenv("LEPHAREDIR", str(lepharedir))
         monkeypatch.setenv("LEPHAREWORK", str(lepharework))
 
@@ -382,7 +521,18 @@ class TestRunSetup:
             # Simulate RomanCatalogProcess.process() (re-)creating the model
             # pickle after the stale one was removed by run_setup(), and
             # writing its log file alongside the catalog.
-            (lepharework / "roman_model.pkl").write_text("")
+            with open(lepharework / "roman_model.pkl", "wb") as handle:
+                pickle.dump(
+                    {
+                        "run_dir": "/old/host/inform_roman",
+                        "lephare_config": {
+                            "FILTER_REP": "/old/host/lephare_data/filt",
+                            "PARA_OUT": "/old/host/default_roman_output.para",
+                        },
+                    },
+                    handle,
+                )
+            (inform_roman / "lib_mag").mkdir(parents=True, exist_ok=True)
             (lepharework / "roman_photoz.log").write_text("")
 
         mock_rcp.process.side_effect = _fake_process
@@ -407,6 +557,16 @@ class TestRunSetup:
         # while the intermediate log file is removed
         assert os.path.exists(catalog_path)
         assert not os.path.exists(os.path.join(str(lepharework), "roman_photoz.log"))
+
+        # published model pickle is rewritten for relocatable packaging
+        with open(lepharework / "roman_model.pkl", "rb") as handle:
+            model = pickle.load(handle)
+        assert model["run_dir"] == str(inform_roman.resolve())
+        assert model["lephare_config"]["FILTER_REP"] == str(
+            Path(inform_roman.resolve()) / "filt"
+        )
+        assert model["lephare_config"]["PARA_OUT"] == DEFAULT_OUTPUT_KEYWORDS
+        assert (inform_roman / "lib_mag").exists()
 
         # LEPHAREDIR was trimmed to estimator essentials
         remaining = {p.name for p in lepharedir.iterdir()}

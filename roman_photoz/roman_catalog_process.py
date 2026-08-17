@@ -2,6 +2,7 @@
 import argparse
 import json
 import os
+import pickle
 import tempfile
 from collections import OrderedDict
 from importlib.resources import files
@@ -26,11 +27,81 @@ DataStore.allow_overwrite = True
 
 LEPHAREDIR = Path(os.environ.get("LEPHAREDIR", lp.LEPHAREDIR))
 LEPHAREWORK = os.environ.get("LEPHAREWORK", (LEPHAREDIR / "work").as_posix())
+INFORMER_STAGE_NAME = "inform_roman"
 
 # default paths and filenames
 DEFAULT_OUTPUT_KEYWORDS = str(
     files(__package__ + ".data") / "default_roman_output.para"
 )
+
+
+def get_informer_run_dir(lepharework: Optional[str] = None) -> str:
+    """
+    Return the LePhare informer run directory for the current work tree.
+
+    RAIL's LephareInformer writes intermediate libraries under
+    ``dirname(LEPHAREWORK)/inform_roman``. Estimation must use that same
+    local path rather than any absolute ``run_dir`` baked into a relocated
+    model pickle.
+    """
+    work_dir = lepharework or os.environ.get("LEPHAREWORK", LEPHAREWORK)
+    return str(Path(work_dir).resolve().parent / INFORMER_STAGE_NAME)
+
+
+def _make_model_portable(model: dict, run_dir: str) -> dict:
+    """
+    Rewrite absolute paths stored in a LePhare model so it can be relocated.
+
+    Parameters
+    ----------
+    model : dict
+        Model dictionary loaded from ``roman_model.pkl``.
+    run_dir : str
+        Local informer run directory that should replace any baked-in path.
+        ``FILTER_REP`` is rewritten to ``$run_dir/filt`` because setup keeps
+        the compiled filter files there (and trims ``LEPHAREDIR/filt`` away).
+
+    Returns
+    -------
+    dict
+        Updated model dictionary.
+    """
+    portable = dict(model)
+    portable["run_dir"] = run_dir
+
+    lephare_config = portable.get("lephare_config")
+    if isinstance(lephare_config, dict):
+        portable_config = dict(lephare_config)
+        portable_config["FILTER_REP"] = str(Path(run_dir) / "filt")
+        # Always use the package PARA_OUT so relocated installs do not depend
+        # on the absolute source path captured during --setup.
+        portable_config["PARA_OUT"] = DEFAULT_OUTPUT_KEYWORDS
+        portable["lephare_config"] = portable_config
+
+    return portable
+
+
+def load_portable_informer_model(
+    model_path: str,
+    run_dir: Optional[str] = None,
+) -> dict:
+    """
+    Load an informer model pickle and rewrite non-portable absolute paths.
+
+    Purpose: allow prebuilt ``roman_model.pkl`` assets to be copied to a new
+    machine/directory (for example AWS) without retaining the original host
+    paths for ``run_dir``, ``FILTER_REP``, or ``PARA_OUT``.
+    """
+    with open(model_path, "rb") as handle:
+        model = pickle.load(handle)
+
+    if not isinstance(model, dict):
+        raise TypeError(
+            f"Expected informer model at {model_path} to be a dict, got {type(model)!r}"
+        )
+
+    resolved_run_dir = run_dir or get_informer_run_dir()
+    return _make_model_portable(model, run_dir=resolved_run_dir)
 
 
 class RomanCatalogProcess:
@@ -184,7 +255,7 @@ class RomanCatalogProcess:
         qso_stage_config = {f"qso.{k}": v for k, v in qso_overrides.items()}
 
         self.inform_stage = LephareInformer.make_stage(
-            name="inform_roman",
+            name=INFORMER_STAGE_NAME,
             nondetect_val=np.nan,
             model=self.informer_model_path,
             hdf5_groupname="",
@@ -214,7 +285,12 @@ class RomanCatalogProcess:
         # |we use rail's interface here to create the estimator stage
         # |https://rail-hub.readthedocs.io/en/latest/api/rail.estimation.estimator.html
         if self.informer_model_exists:
-            model = self.informer_model_path
+            # Rewrite absolute host paths from the pickle so relocated assets
+            # (S3/EFS copies, temp dirs, etc.) still resolve locally.
+            model = load_portable_informer_model(
+                self.informer_model_path,
+                run_dir=self.informer_run_dir,
+            )
         else:
             model = self.inform_stage.get_handle("model")
 
@@ -236,6 +312,9 @@ class RomanCatalogProcess:
             ref_band=self.flux_cols[0],
             output_keys=self.default_roman_output_keys,
             use_inform_offsets=False,
+            # Force the local informer tree instead of any absolute run_dir
+            # stored in a relocated model pickle.
+            run_dir=self.informer_run_dir,
             **{f"lephare.{k}": v for k, v in self.config.items()},
         )
 
@@ -405,12 +484,24 @@ class RomanCatalogProcess:
         return False
 
     @property
+    def informer_run_dir(self):
+        """
+        Local LePhare informer run directory used for estimation.
+
+        This is always derived from the current ``LEPHAREWORK`` location so a
+        relocated model pickle cannot force estimation back onto the original
+        absolute host path.
+        """
+        return get_informer_run_dir()
+
+    @property
     def informer_model_path(self):
         """
         Get the path to the informer model file used.
 
-        The path is determined by checking the INFORMER_MODEL_PATH environment variable first,
-        falling back to LEPHAREWORK if not set.
+        ``INFORMER_MODEL_PATH`` may be either the model file itself or the
+        directory containing it. When unset, ``LEPHAREWORK`` is used as the
+        model directory.
 
         Returns
         -------
@@ -420,7 +511,10 @@ class RomanCatalogProcess:
         informer_path = os.environ.get(
             "INFORMER_MODEL_PATH", os.environ.get("LEPHAREWORK", "")
         )
-        return Path(informer_path, self.model_filename).as_posix()
+        path = Path(informer_path)
+        if path.suffix == ".pkl" or path.name == self.model_filename:
+            return path.as_posix()
+        return (path / self.model_filename).as_posix()
 
 
 def _get_parser():
@@ -567,13 +661,14 @@ def run_setup(nobj: int = 1000, simulated_catalog_filename: str = "roman_photoz_
 
     # Remove stale informer artifacts to ensure a clean build. The model
     # pickle stores an absolute run_dir path from the original informer run;
-    # if it's stale, the estimator will look in the wrong place.
+    # if it's stale, the estimator will look in the wrong place unless the
+    # runtime path rewrite in load_portable_informer_model() is used.
     model_pickle = os.path.join(lepharework, "roman_model.pkl")
     if os.path.exists(model_pickle):
         logger.info(f"Removing stale model pickle: {model_pickle}")
         os.remove(model_pickle)
     # LephareInformer creates its run directory at $LEPHAREWORK/../inform_roman
-    informer_run_dir = os.path.join(os.path.dirname(lepharework), "inform_roman")
+    informer_run_dir = get_informer_run_dir(lepharework)
     if os.path.isdir(informer_run_dir):
         logger.info(f"Removing stale informer run directory: {informer_run_dir}")
         shutil.rmtree(informer_run_dir)
@@ -581,6 +676,20 @@ def run_setup(nobj: int = 1000, simulated_catalog_filename: str = "roman_photoz_
     logger.info("Running informer + estimator stage...")
     RomanCatalogProcess().process(input_filename=catalog_path)
     logger.info(f"Model written to: {model_pickle}")
+
+    # Rewrite absolute host paths in the published model so the three-tree
+    # package (lephare_data, lephare_work, inform_roman) can be relocated.
+    if os.path.exists(model_pickle):
+        portable_model = load_portable_informer_model(
+            model_pickle,
+            run_dir=informer_run_dir,
+        )
+        with open(model_pickle, "wb") as handle:
+            pickle.dump(portable_model, handle)
+        logger.info(
+            "Rewrote absolute paths in model pickle for relocatable packaging "
+            f"(run_dir={informer_run_dir})."
+        )
 
     logger.info("Removing intermediate files...")
     log_path = os.path.join(lepharework, "roman_photoz.log")
@@ -608,6 +717,8 @@ def run_setup(nobj: int = 1000, simulated_catalog_filename: str = "roman_photoz_
             os.path.join(lepharedir, "ext"),
             os.path.join(lepharedir, "alloutputkeys.txt"),
             model_pickle,
+            informer_run_dir,
+            os.path.join(informer_run_dir, "lib_mag"),
         )
         if not os.path.exists(path)
     ]
@@ -620,6 +731,7 @@ def run_setup(nobj: int = 1000, simulated_catalog_filename: str = "roman_photoz_
 
     logger.info("Setup complete.")
     logger.info(f"Model:       {model_pickle}")
+    logger.info(f"Informer:    {informer_run_dir}")
     logger.info(f"Catalog:     {catalog_path} (kept, reusable as an input catalog)")
     logger.info(f"LEPHAREDIR:  {lepharedir} (trimmed to estimator essentials)")
     logger.info(f"LEPHAREWORK: {lepharework}")

@@ -60,13 +60,16 @@ the estimator, and verify that the required artifacts are present:
 
    ``roman-photoz`` also looks for an ``INFORMER_MODEL_PATH`` environment
    variable to determine where the informer model file (``roman_model.pkl``
-   by default) is read from/written to. It defaults to ``LEPHAREWORK`` if
-   not set, so you only need to set it explicitly if you want to read/store
-   the model somewhere else:
+   by default) is read from/written to. It may point either at the model
+   directory or directly at the pickle file. It defaults to ``LEPHAREWORK``
+   if not set, so you only need to set it explicitly if you want to
+   read/store the model somewhere else:
 
    .. code-block:: bash
 
       export INFORMER_MODEL_PATH=/path/to/model_dir
+      # or:
+      # export INFORMER_MODEL_PATH=/path/to/model_dir/roman_model.pkl
 
 2. Run:
 
@@ -87,6 +90,12 @@ the estimator, and verify that the required artifacts are present:
    can use in step 3 below if you don't have your own catalog yet (see
    "Creating a fresh simulated catalog" below for another option).
 
+   Setup also creates a sibling informer run directory at
+   ``dirname($LEPHAREWORK)/inform_roman``. That tree contains the SED
+   libraries used by estimation (for example ``lib_mag/QSO_COSMOS.doc``)
+   and must be packaged together with ``lephare_data`` and ``lephare_work``
+   when the assets are copied to another host.
+
    .. note::
 
      ``roman-photoz --setup`` only needs to be run **once** per
@@ -94,6 +103,23 @@ the estimator, and verify that the required artifacts are present:
      data and builds the informer model, which are then reused for all
      subsequent ``roman-photoz`` runs. There's no need to run it again unless
      you delete/change those directories.
+
+   .. note::
+
+     Relocatable packaging expects this layout (names can vary, sibling
+     relationship matters):
+
+     .. code-block:: text
+
+        package_root/
+          lephare_data/     # LEPHAREDIR
+          lephare_work/     # LEPHAREWORK, includes roman_model.pkl
+          inform_roman/     # informer run dir used by estimation
+
+     ``roman-photoz`` rewrites absolute host paths from ``roman_model.pkl``
+     at runtime and forces estimation to use the local ``inform_roman``
+     directory derived from ``LEPHAREWORK``. Still copy all three trees
+     together; ``lephare_work`` alone is not sufficient.
 
 3. Run ``roman-photoz``. Assuming there is a folder named ``OUTPUT`` in the
    current working directory where the updated catalog containing the
