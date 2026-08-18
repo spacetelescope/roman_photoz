@@ -26,6 +26,16 @@ jobs:
   test:
     uses: OpenAstronomy/github-actions-workflows/.github/workflows/tox.yml@8c8bb6c6c962542921f993d47d26df38dccd50b1 # v3.0.2
     with:
+      # lephare 1.0.0rc0 has wheels for 3.11-3.13; 3.14 currently builds from
+      # source and needs OpenMP headers/libs (libomp-dev on Ubuntu).
+      libraries: |
+        apt:
+          - libomp-dev
       envs: |
         - linux: py311-xdist
         - linux: py312-xdist
+        - linux: py313-xdist
+        - linux: py314-xdist
+        - name: romancal[sdp] import smoke (latest Python)
+          linux: check-sdp
+          python-version: "3.14"
