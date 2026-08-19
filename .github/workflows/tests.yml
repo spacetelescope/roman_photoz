@@ -26,16 +26,22 @@ jobs:
   test:
     uses: OpenAstronomy/github-actions-workflows/.github/workflows/tox.yml@8c8bb6c6c962542921f993d47d26df38dccd50b1 # v3.0.2
     with:
-      # lephare 1.0.0rc0 has wheels for 3.11-3.13; 3.14 currently builds from
-      # source and needs OpenMP headers/libs (libomp-dev on Ubuntu).
-      libraries: |
-        apt:
-          - libomp-dev
+      # Keep hangs from burning a full GHA timeout; unit jobs are ~5-10 min.
+      timeout-minutes: 45
       envs: |
+        # lephare 1.0.0rc0 ships cp311-cp313 wheels — no system OpenMP needed.
         - linux: py311-xdist
         - linux: py312-xdist
         - linux: py313-xdist
+        # 3.14 has no lephare 1.0.0rc0 wheel yet; build from source needs OpenMP.
+        # Scope apt to this job only: a global libomp-dev install raced/hung
+        # parallel runners for hours on the previous CI run.
         - linux: py314-xdist
-        - name: romancal[sdp] import smoke (latest Python)
+          libraries:
+            apt:
+              - libomp-dev
+        # SDP smoke on 3.13 (wheel path) validates romancal[sdp] without a
+        # source build of lephare.
+        - name: romancal[sdp] import smoke (Python 3.13)
           linux: check-sdp
-          python-version: "3.14"
+          python-version: "3.13"
