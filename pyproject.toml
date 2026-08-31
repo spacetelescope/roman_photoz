@@ -17,7 +17,7 @@ dependencies = [
   # 1.0.0rc0 is the first 1.x series; pin lower bound for romancal#2369.
   # Note: as of 1.0.0rc0, cp314 wheels are not published, so Python 3.14
   # installs build lephare from source (needs OpenMP).
-  "lephare >=1.0.0rc0",
+  "lephare >=1.0.0rc2",
   "numpy >=2.0",
   "pandas[excel]",
   "pz-rail >=1.0.0",    # Pin to at least 1.0.0 for stable 'main_store' API

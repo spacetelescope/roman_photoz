@@ -29,19 +29,13 @@ jobs:
       # Keep hangs from burning a full GHA timeout; unit jobs are ~5-10 min.
       timeout-minutes: 45
       envs: |
-        # lephare 1.0.0rc0 ships cp311-cp313 wheels — no system OpenMP needed.
+        # lephare 1.0.0rc2 is expected to provide wheels through Python 3.14,
+        # so do not install system OpenMP libraries for these jobs.
         - linux: py311-xdist
         - linux: py312-xdist
         - linux: py313-xdist
-        # 3.14 has no lephare 1.0.0rc0 wheel yet; build from source needs OpenMP.
-        # Scope apt to this job only: a global libomp-dev install raced/hung
-        # parallel runners for hours on the previous CI run.
         - linux: py314-xdist
-          libraries:
-            apt:
-              - libomp-dev
-        # SDP smoke on 3.13 (wheel path) validates romancal[sdp] without a
-        # source build of lephare.
-        - name: romancal[sdp] import smoke (Python 3.13)
+        # SDP smoke on 3.14 validates romancal[sdp] against the wheel path.
+        - name: romancal[sdp] import smoke (Python 3.14)
           linux: check-sdp
-          python-version: "3.13"
+          python-version: "3.14"
