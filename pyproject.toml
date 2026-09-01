@@ -14,9 +14,6 @@ classifiers = [
 dependencies = [
   "asdf >=3.3.0",
   "astropy >=5.3.0",
-  # 1.0.0rc0 is the first 1.x series; pin lower bound for romancal#2369.
-  # Note: as of 1.0.0rc0, cp314 wheels are not published, so Python 3.14
-  # installs build lephare from source (needs OpenMP).
   "lephare >=1.0.0rc2",
   "numpy >=2.0",
   "pandas[excel]",
