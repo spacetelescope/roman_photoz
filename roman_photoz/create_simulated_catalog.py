@@ -11,7 +11,6 @@ import lephare as lp
 import numpy as np
 from astropy.table import Table
 from numpy.lib import recfunctions as rfn
-from rail.core import DataStore
 
 from roman_photoz import create_roman_filters
 from roman_photoz.default_config_file import default_roman_config
@@ -19,8 +18,6 @@ from roman_photoz.logger import logger
 from roman_photoz.utils import get_roman_filter_list, save_catalog
 
 ROMAN_DEFAULT_CONFIG = default_roman_config
-
-DataStore.allow_overwrite = True
 
 LEPHAREDIR = os.environ.get("LEPHAREDIR", lp.LEPHAREDIR)
 LEPHAREWORK = os.environ.get(

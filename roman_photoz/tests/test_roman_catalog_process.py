@@ -47,33 +47,24 @@ class TestRomanCatalogProcess:
         rcp = RomanCatalogProcess(config_filename=default_roman_config)
         assert rcp.informer_model_exists is expected
 
-    @patch("roman_photoz.roman_catalog_process.LephareInformer")
-    def test_create_informer_stage_uses_correct_model(self, mock_informer):
-        """Test that create_informer_stage uses the correct model path"""
-        # Setup the mock
-        mock_stage = MagicMock()
-        mock_informer.make_stage.return_value = mock_stage
-
-        # Create RCP with custom model
+    @patch("lephare.prepare")
+    def test_create_informer_stage_uses_correct_model(
+        self, mock_prepare, tmp_path, monkeypatch
+    ):
+        """Test purpose: verify create_informer_stage calls lephare.prepare and creates the model file at informer_model_path."""
+        monkeypatch.setenv("INFORMER_MODEL_PATH", str(tmp_path))
         custom_model = "special_model.pkl"
         rcp = RomanCatalogProcess(
             config_filename=default_roman_config, model_filename=custom_model
         )
-
-        # Add required attributes for create_informer_stage
         rcp.flux_cols = ["flux_F158"]
         rcp.flux_err_cols = ["flux_err_F158"]
         rcp.data = {}
 
-        # Call the method
         rcp._create_informer_stage()
-
-        # Check that the correct model path was used
-        call_args = mock_informer.make_stage.call_args[1]
-        assert custom_model in call_args["model"]
-
-        # Check that inform was called
-        mock_stage.inform.assert_called_once()
+        mock_prepare.assert_called_once()
+        expected_path = tmp_path / custom_model
+        assert expected_path.exists()
 
     @patch("argparse.ArgumentParser.parse_args")
     @patch("roman_photoz.roman_catalog_process.RomanCatalogProcess")
@@ -341,58 +332,18 @@ class TestRomanCatalogProcess:
         assert portable["lephare_config"]["Z_STEP"] == "0.04,0.,4.0"
         assert portable["offsets"] == [0.0]
 
-    @patch("roman_photoz.roman_catalog_process.LephareEstimator")
-    def test_create_estimator_stage_uses_portable_model_and_local_run_dir(
-        self, mock_estimator, tmp_path, monkeypatch
-    ):
-        """Purpose: estimator must ignore baked-in absolute run_dir paths."""
-        package_root = tmp_path / "assets"
-        lepharework = package_root / "lephare_work"
-        lepharedir = package_root / "lephare_data"
-        inform_roman = package_root / "inform_roman"
-        lepharework.mkdir(parents=True)
-        lepharedir.mkdir(parents=True)
-        inform_roman.mkdir(parents=True)
-
-        model_path = lepharework / "roman_model.pkl"
-        with open(model_path, "wb") as handle:
-            pickle.dump(
-                {
-                    "run_dir": "/System/Volumes/Data/grp/roman/old/inform_roman",
-                    "lephare_config": {
-                        "FILTER_REP": "/grp/roman/old/lephare_data/filt",
-                        "PARA_OUT": "/Users/old/default_roman_output.para",
-                        "Z_STEP": "0.04,0.,4.0",
-                    },
-                    "offsets": None,
-                },
-                handle,
-            )
-
-        monkeypatch.setenv("LEPHAREWORK", str(lepharework))
-        monkeypatch.setenv("LEPHAREDIR", str(lepharedir))
-        monkeypatch.setenv("INFORMER_MODEL_PATH", str(lepharework))
-
-        mock_stage = MagicMock()
-        mock_estimator.make_stage.return_value = mock_stage
-
+    @patch("lephare.process", return_value=(Table(), None))
+    def test_create_estimator_stage_calls_process(self, mock_process):
+        """Test purpose: verify _create_estimator_stage formats input and calls lephare.process."""
         rcp = RomanCatalogProcess(config_filename=default_roman_config)
         rcp.flux_cols = ["segment_f158_flux"]
         rcp.flux_err_cols = ["segment_f158_flux_err"]
-        rcp.data = Table()
+        rcp.data = Table({"segment_f158_flux": [1.0], "segment_f158_flux_err": [0.1]})
 
         rcp._create_estimator_stage()
 
-        call_kwargs = mock_estimator.make_stage.call_args.kwargs
-        expected_run_dir = str(inform_roman.resolve())
-        assert call_kwargs["run_dir"] == expected_run_dir
-
-        model = call_kwargs["model"]
-        assert isinstance(model, dict)
-        assert model["run_dir"] == expected_run_dir
-        assert model["lephare_config"]["FILTER_REP"] == str(Path(expected_run_dir) / "filt")
-        assert model["lephare_config"]["PARA_OUT"] == DEFAULT_OUTPUT_KEYWORDS
-        mock_stage.estimate.assert_called_once_with(rcp.data)
+        mock_process.assert_called_once()
+        assert rcp.estimated is not None
 
 
 class TestRunSetup:
