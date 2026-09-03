@@ -1,8 +1,8 @@
-### COSMOS example with rail+lephare ###
+### COSMOS example with lephare ###
 import argparse
 import json
 import os
-import tempfile
+import pickle
 from collections import OrderedDict
 from importlib.resources import files
 from pathlib import Path
@@ -13,16 +13,12 @@ import lephare as lp
 import numpy as np
 from asdf import AsdfFile
 from astropy.table import Table
-from rail.core import DataStore
-from rail.estimation.algos.lephare import LephareEstimator, LephareInformer
 from roman_datamodels import datamodels
 
 from roman_photoz.default_config_file import default_roman_config
 from roman_photoz.logger import logger
 from roman_photoz.roman_catalog_handler import RomanCatalogHandler
 from roman_photoz.utils import read_output_keys
-
-DataStore.allow_overwrite = True
 
 LEPHAREDIR = Path(os.environ.get("LEPHAREDIR", lp.LEPHAREDIR))
 LEPHAREWORK = os.environ.get("LEPHAREWORK", (LEPHAREDIR / "work").as_posix())
@@ -140,31 +136,53 @@ class RomanCatalogProcess:
             fit_err_colname.format(filter_id) for filter_id in handler.filter_names
         ]
 
-        # Convert numpy structured array to astropy Table for RAIL compatibility
+        # Convert numpy structured array to astropy Table
         return Table(handler.catalog)
+
+    def _format_lephare_input(self) -> Table:
+        """
+        Format the catalog data into the table structure required by LePhare.
+        """
+        ng = len(self.data)
+        input_table = Table()
+        if "label" in self.data.colnames:
+            input_table["id"] = [str(x) for x in self.data["label"]]
+        elif "id" in self.data.colnames:
+            input_table["id"] = [str(x) for x in self.data["id"]]
+        else:
+            input_table["id"] = [str(x) for x in range(ng)]
+
+        context = np.full(ng, 0)
+        for n in range(len(self.flux_cols)):
+            col = self.flux_cols[n]
+            err_col = self.flux_err_cols[n]
+            flux_val = np.array(self.data[col], dtype=float)
+            err_val = np.array(self.data[err_col], dtype=float)
+            input_table[col] = flux_val
+            input_table[err_col] = err_val
+            mask = (flux_val > 0) & (~np.isnan(flux_val))
+            mask &= (err_val > 0) & (~np.isnan(err_val))
+            context += mask.astype(int) * (2**n)
+
+        if "context" in self.data.colnames:
+            input_table["context"] = self.data["context"]
+        else:
+            input_table["context"] = context
+
+        if "redshift" in self.data.colnames:
+            input_table["zspec"] = np.array(self.data["redshift"], dtype=float)
+        elif "redshift_true" in self.data.colnames:
+            input_table["zspec"] = np.array(self.data["redshift_true"], dtype=float)
+        else:
+            input_table["zspec"] = np.full(ng, -99.0, dtype=float)
+
+        input_table["string_data"] = [" "] * ng
+        return input_table
 
     def _create_informer_stage(self):
         """
         Create the informer stage to generate the library of SEDs with various parameters.
         """
-        # use the inform stage to create the library of SEDs with
-        # various redshifts, extinction parameters, and reddening values.
-        # -> Informer will produce as output a generic "model",
-        #    the details of which depends on the sub-class.
-        # |we use rail's interface here to create the informer stage
-        # |https://rail-hub.readthedocs.io/en/latest/api/rail.estimation.informer.html
-
-        # set up the informer stage with info from the config file (Z_STEP, ZMIN, ZMAX)
-        z_grid = self.config["Z_STEP"].split(",")
-        zstep = float(z_grid[0])
-        zmin = float(z_grid[1])
-        zmax = float(z_grid[2])
-        # we need to pass nzbins to the informer stage instead
-        # of zstep, which will be calculated by the informer at runtime
-        nzbins = (zmax - zmin) / zstep
-
-        # following LePhare default recommendations, some
-        # different settings for stars / galaxies / quasars
         star_overrides = {}
         gal_overrides = {
             "MOD_EXTINC": "18,26,26,33,26,33,26,33",
@@ -178,69 +196,24 @@ class RomanCatalogProcess:
             "EXTINC_LAW": "SB_calzetti.dat",
         }
 
-        lephare_stage_config = {f"lephare.{k}": v for k, v in self.config.items()}
-        star_stage_config = {f"star.{k}": v for k, v in star_overrides.items()}
-        gal_stage_config = {f"gal.{k}": v for k, v in gal_overrides.items()}
-        qso_stage_config = {f"qso.{k}": v for k, v in qso_overrides.items()}
-
-        self.inform_stage = LephareInformer.make_stage(
-            name="inform_roman",
-            nondetect_val=np.nan,
-            model=self.informer_model_path,
-            hdf5_groupname="",
-            bands=self.flux_cols,
-            err_bands=self.flux_err_cols,
-            ref_band=self.flux_cols[0],
-            zmin=zmin,
-            zmax=zmax,
-            nzbins=nzbins,
-            **lephare_stage_config,
-            **star_stage_config,
-            **gal_stage_config,
-            **qso_stage_config,
+        lp.prepare(
+            self.config,
+            star_config=star_overrides,
+            gal_config=gal_overrides,
+            qso_config=qso_overrides,
         )
 
-        self.inform_stage.inform(self.data)
+        Path(self.informer_model_path).parent.mkdir(parents=True, exist_ok=True)
+        with open(self.informer_model_path, "wb") as f:
+            pickle.dump({"config": self.config}, f)
 
     def _create_estimator_stage(self):
         """
         Create the estimator stage to find the best fits from the library.
         """
-        # take the sythetic test data, and find the best
-        # fits from the library. This results in a PDF, zmode,
-        # and zmean for each input test data.
-        # -> Estimators use a generic "model", apply the photo-z estimation
-        #    and provide as "output" a QPEnsemble, with per-object p(z).
-        # |we use rail's interface here to create the estimator stage
-        # |https://rail-hub.readthedocs.io/en/latest/api/rail.estimation.estimator.html
-        if self.informer_model_exists:
-            model = self.informer_model_path
-        else:
-            model = self.inform_stage.get_handle("model")
-
-        tf = tempfile.NamedTemporaryFile(
-            prefix="output_estimate_lephare", suffix=".hdf5", delete=True, dir="."
-        )
-        self.tempfile = (
-            tf  # keep in memory until this object goes out of scope, then delete?
-        )
-        stagename = os.path.basename(os.path.splitext(tf.name)[0])[7:]
-        estimate_lephare = LephareEstimator.make_stage(
-            name=stagename,
-            nondetect_val=np.nan,
-            model=model,
-            hdf5_groupname="",
-            aliases=dict(input="test_data", output="lephare_estim"),
-            bands=self.flux_cols,
-            err_bands=self.flux_err_cols,
-            ref_band=self.flux_cols[0],
-            output_keys=self.default_roman_output_keys,
-            use_inform_offsets=False,
-            **{f"lephare.{k}": v for k, v in self.config.items()},
-        )
-
-        # dh = estimate_lephare.add_data('input', self.data)
-        self.estimated = estimate_lephare.estimate(self.data)
+        input_table = self._format_lephare_input()
+        output, _ = lp.process(self.config, input_table, write_outputs=False)
+        self.estimated = output
 
     def _save_results(
         self,
@@ -318,7 +291,7 @@ class RomanCatalogProcess:
             description = col_def.get("description", "")
 
             # Create PyArrow field with metadata
-            arr = pa.array(self.estimated.data.ancil[oldname])
+            arr = pa.array(self.estimated[oldname])
             field = pa.field(newname, arr.type, metadata={"description": description})
 
             if newname not in tab.column_names:
@@ -327,7 +300,7 @@ class RomanCatalogProcess:
                 tab = tab.set_column(tab.schema.get_field_index(newname), field, arr)
 
             # Also add to Astropy table with metadata
-            tab_astro[newname] = self.estimated.data.ancil[oldname]
+            tab_astro[newname] = self.estimated[oldname]
             tab_astro[newname].info.description = description
 
             logger.info(

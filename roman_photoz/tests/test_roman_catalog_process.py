@@ -40,33 +40,24 @@ class TestRomanCatalogProcess:
         rcp = RomanCatalogProcess(config_filename=default_roman_config)
         assert rcp.informer_model_exists is expected
 
-    @patch("roman_photoz.roman_catalog_process.LephareInformer")
-    def test_create_informer_stage_uses_correct_model(self, mock_informer):
-        """Test that create_informer_stage uses the correct model path"""
-        # Setup the mock
-        mock_stage = MagicMock()
-        mock_informer.make_stage.return_value = mock_stage
-
-        # Create RCP with custom model
+    @patch("lephare.prepare")
+    def test_create_informer_stage_uses_correct_model(
+        self, mock_prepare, tmp_path, monkeypatch
+    ):
+        """Test purpose: verify create_informer_stage calls lephare.prepare and creates the model file at informer_model_path."""
+        monkeypatch.setenv("INFORMER_MODEL_PATH", str(tmp_path))
         custom_model = "special_model.pkl"
         rcp = RomanCatalogProcess(
             config_filename=default_roman_config, model_filename=custom_model
         )
-
-        # Add required attributes for create_informer_stage
         rcp.flux_cols = ["flux_F158"]
         rcp.flux_err_cols = ["flux_err_F158"]
         rcp.data = {}
 
-        # Call the method
         rcp._create_informer_stage()
-
-        # Check that the correct model path was used
-        call_args = mock_informer.make_stage.call_args[1]
-        assert custom_model in call_args["model"]
-
-        # Check that inform was called
-        mock_stage.inform.assert_called_once()
+        mock_prepare.assert_called_once()
+        expected_path = tmp_path / custom_model
+        assert expected_path.exists()
 
     @patch("argparse.ArgumentParser.parse_args")
     @patch("roman_photoz.roman_catalog_process.RomanCatalogProcess")
