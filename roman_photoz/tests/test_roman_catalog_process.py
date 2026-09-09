@@ -1,7 +1,7 @@
 import os
 import pickle
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 from astropy.table import Table
@@ -40,12 +40,20 @@ class TestRomanCatalogProcess:
         assert custom_model in rcp.informer_model_path
 
     @pytest.mark.parametrize("file_exists, expected", [(True, True), (False, False)])
-    @patch("os.path.exists")
-    def test_informer_model_exists(self, mock_path_exists, file_exists, expected):
-        """Test the informer_model_exists property with different file existence states"""
-        mock_path_exists.return_value = file_exists
+    def test_informer_model_exists(self, file_exists, expected):
+        """Test informer_model_exists for present and missing model files.
+
+        Purpose: ensure the property reflects whether the informer model path
+        exists, without globally mocking os.path.exists (which also breaks
+        package-data lookups during RomanCatalogProcess initialization).
+        """
         rcp = RomanCatalogProcess(config_filename=default_roman_config)
-        assert rcp.informer_model_exists is expected
+        with patch(
+            "roman_photoz.roman_catalog_process.os.path.exists",
+            return_value=file_exists,
+        ) as mock_path_exists:
+            assert rcp.informer_model_exists is expected
+            mock_path_exists.assert_called_with(rcp.informer_model_path)
 
     @patch("roman_photoz.roman_catalog_process.LephareInformer")
     def test_create_informer_stage_uses_correct_model(self, mock_informer):
@@ -157,7 +165,6 @@ class TestRomanCatalogProcess:
             ),  # When model exists, create_informer_stage should NOT be called
         ],
     )
-    @patch("os.path.exists")
     @patch(
         "roman_photoz.roman_catalog_process.RomanCatalogProcess._create_informer_stage"
     )
@@ -168,15 +175,16 @@ class TestRomanCatalogProcess:
         self,
         mock_create_estimator,
         mock_create_informer,
-        mock_exists,
         model_exists,
         should_create_informer,
     ):
-        """Test that the process method handles model existence correctly"""
-        # Setup mock to indicate model existence
-        mock_exists.return_value = model_exists
+        """Test that process() builds the informer only when the model is missing.
 
-        # Create RCP instance
+        Purpose: verify create_informer_stage is gated on informer_model_exists,
+        without mocking os.path.exists globally (package data must remain
+        readable during RomanCatalogProcess initialization).
+        """
+        # Create RCP instance before patching model existence
         rcp = RomanCatalogProcess(config_filename=default_roman_config)
 
         # Mock get_data and format_data
@@ -184,8 +192,14 @@ class TestRomanCatalogProcess:
         rcp._format_data = MagicMock()
         rcp._update_input = MagicMock()
 
-        # Call process method
-        rcp.process(input_filename="test")
+        with patch.object(
+            RomanCatalogProcess,
+            "informer_model_exists",
+            new_callable=PropertyMock,
+            return_value=model_exists,
+        ):
+            # Call process method
+            rcp.process(input_filename="test")
 
         # Verify create_informer_stage was called or not based on model existence
         if should_create_informer:

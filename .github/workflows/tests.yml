@@ -26,6 +26,16 @@ jobs:
   test:
     uses: OpenAstronomy/github-actions-workflows/.github/workflows/tox.yml@8c8bb6c6c962542921f993d47d26df38dccd50b1 # v3.0.2
     with:
+      # Keep hangs from burning a full GHA timeout; unit jobs are ~5-10 min.
+      timeout-minutes: 45
       envs: |
+        # lephare 1.0.0rc2 is expected to provide wheels through Python 3.14,
+        # so do not install system OpenMP libraries for these jobs.
         - linux: py311-xdist
         - linux: py312-xdist
+        - linux: py313-xdist
+        - linux: py314-xdist
+        # SDP smoke on 3.14 validates romancal[sdp] against the wheel path.
+        - name: romancal[sdp] import smoke (Python 3.14)
+          linux: check-sdp
+          python-version: "3.14"

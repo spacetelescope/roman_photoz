@@ -14,7 +14,7 @@ classifiers = [
 dependencies = [
   "asdf >=3.3.0",
   "astropy >=5.3.0",
-  "lephare >=1.0.0rc0",
+  "lephare >=1.0.0rc2",
   "numpy >=2.0",
   "pandas[excel]",
   "pz-rail >=1.0.0",    # Pin to at least 1.0.0 for stable 'main_store' API
@@ -41,6 +41,7 @@ test = [
   "ci-watson>=0.10.0", # provides --bigdata and --slow pytest flags
   "deepdiff>=8.6.0",   # needed by regression tests
 ]
+sdp = ["romancal[sdp]>=1.1.0"]
 dev = ["roman_photoz[docs,test]", "tox > 4", "pre-commit > 3"]
 
 [project.urls]
@@ -69,6 +70,9 @@ zip-safe = false
   "**/*.yaml",
   "**/*.json",
   "**/*.asdf",
+  "**/*.para",
+  "**/*.parquet",
+  "**/*.xlsx",
 ]
 
 [tool.pytest]
