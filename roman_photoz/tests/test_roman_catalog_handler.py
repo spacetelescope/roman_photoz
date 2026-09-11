@@ -125,6 +125,103 @@ class TestRomanCatalogHandler:
             == mock_catalog_data["redshift"][1]
         )
 
+    def test_format_catalog_with_dust_ebv(
+        self, roman_catalog_handler, mock_catalog_data
+    ):
+        """
+        Test purpose: Verify that when 'dust_ebv' is present in the input catalog,
+        flux and flux_err values are correctly scaled by the dereddening factor
+        10 ** (dust_ebv * coeff / 2.5) and converted to erg/s/cm^2/Hz (10**-32 factor),
+        and that 'dust_ebv' is preserved in the resulting catalog table.
+        """
+        from roman_photoz.utils import get_extinction_coefficient
+
+        table_with_dust = mock_catalog_data.copy()
+        dust_ebv_values = np.array([0.05, 0.15, 0.25], dtype="f8")
+        table_with_dust["dust_ebv"] = dust_ebv_values
+
+        handler = RomanCatalogHandler()
+        handler.cat_array = table_with_dust.as_array()
+        handler._format_catalog()
+
+        assert handler.catalog is not None
+        assert "dust_ebv" in handler.catalog.dtype.names
+        np.testing.assert_allclose(handler.catalog["dust_ebv"], dust_ebv_values)
+
+        for filter_name in handler.filter_names:
+            flux_field = f"segment_{filter_name}_flux"
+            flux_err_field = f"segment_{filter_name}_flux_err"
+
+            coeff = get_extinction_coefficient(filter_name)
+            dered_factor = 10.0 ** (dust_ebv_values * coeff / 2.5)
+
+            raw_flux = np.array(mock_catalog_data[flux_field], dtype=np.float64)
+            raw_err = np.array(mock_catalog_data[flux_err_field], dtype=np.float64)
+
+            expected_flux = raw_flux * dered_factor * 10**-32
+            expected_err = raw_err * dered_factor * 10**-32
+
+            np.testing.assert_allclose(
+                handler.catalog[flux_field], expected_flux, rtol=1e-6
+            )
+            np.testing.assert_allclose(
+                handler.catalog[flux_err_field], expected_err, rtol=1e-6
+            )
+
+    def test_format_catalog_with_zero_dust_ebv(
+        self, roman_catalog_handler, mock_catalog_data
+    ):
+        """
+        Test purpose: Verify that dust_ebv=0 produces identical results to
+        a catalog formatted without dust dereddening.
+        """
+        table_with_zero_dust = mock_catalog_data.copy()
+        table_with_zero_dust["dust_ebv"] = np.zeros(len(mock_catalog_data), dtype="f8")
+
+        handler_no_dust = RomanCatalogHandler()
+        handler_no_dust.cat_array = mock_catalog_data.as_array()
+        handler_no_dust._format_catalog()
+
+        handler_zero_dust = RomanCatalogHandler()
+        handler_zero_dust.cat_array = table_with_zero_dust.as_array()
+        handler_zero_dust._format_catalog()
+
+        for filter_name in handler_zero_dust.filter_names:
+            flux_field = f"segment_{filter_name}_flux"
+            flux_err_field = f"segment_{filter_name}_flux_err"
+            np.testing.assert_allclose(
+                handler_zero_dust.catalog[flux_field],
+                handler_no_dust.catalog[flux_field],
+            )
+            np.testing.assert_allclose(
+                handler_zero_dust.catalog[flux_err_field],
+                handler_no_dust.catalog[flux_err_field],
+            )
+
+    def test_format_catalog_missing_filter_sentinel_with_dust_ebv(
+        self, roman_catalog_handler
+    ):
+        """
+        Test purpose: Verify that when a filter column is missing from the input catalog,
+        sentinel values (-99) are assigned and not modified by dust dereddening.
+        """
+        # Create a catalog with only F158 and dust_ebv
+        data = Table({
+            "label": [1, 2],
+            "segment_f158_flux": [100.0, 200.0],
+            "segment_f158_flux_err": [5.0, 10.0],
+            "dust_ebv": [0.2, 0.3],
+            "redshift": [0.5, 1.0],
+        })
+
+        handler = RomanCatalogHandler()
+        handler.cat_array = data.as_array()
+        handler._format_catalog()
+
+        # Check that missing filter (e.g., F062) has -99 sentinel values
+        assert np.all(handler.catalog["segment_f062_flux"] == -99)
+        assert np.all(handler.catalog["segment_f062_flux_err"] == -99)
+
 
 if __name__ == "__main__":
     pytest.main(["-v", "test_roman_catalog_handler.py"])
