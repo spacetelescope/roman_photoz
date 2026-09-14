@@ -222,6 +222,27 @@ class TestRomanCatalogHandler:
         assert np.all(handler.catalog["segment_f062_flux"] == -99)
         assert np.all(handler.catalog["segment_f062_flux_err"] == -99)
 
+    def test_process_empty_catalog(self, mock_catalog_data, tmp_path):
+        """Purpose: zero-row catalogs format without error and stay empty.
+
+        Empty association patches must produce a zero-length formatted table
+        with the expected flux columns so downstream processing can attach
+        empty photo-z fields.
+        """
+        empty = mock_catalog_data[:0]
+        catalog_path = tmp_path / "empty_catalog.parquet"
+        empty.write(catalog_path, format="parquet")
+
+        handler = RomanCatalogHandler(str(catalog_path))
+
+        assert handler.catalog is not None
+        assert len(handler.catalog) == 0
+        assert "label" in handler.catalog.colnames
+        assert "redshift" in handler.catalog.colnames
+        for filter_name in handler.filter_names:
+            assert f"segment_{filter_name}_flux" in handler.catalog.colnames
+            assert f"segment_{filter_name}_flux_err" in handler.catalog.colnames
+
 
 if __name__ == "__main__":
     pytest.main(["-v", "test_roman_catalog_handler.py"])

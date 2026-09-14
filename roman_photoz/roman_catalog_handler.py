@@ -157,6 +157,14 @@ class RomanCatalogHandler:
             self.cat_name = input_filename
         if self.cat_array is None:
             self.cat_array = self._read_catalog()
+
+        n_sources = len(self.cat_array)
+        if n_sources == 0:
+            logger.info(
+                f"Input catalog '{self.cat_name}' contains 0 sources; "
+                "producing an empty formatted catalog."
+            )
+
         if self.catalog is None or len(self.catalog) == 0:
             self.catalog = np.empty(0, dtype=[])
             self._format_catalog()
