@@ -23,7 +23,6 @@ ROMAN_EXTINCTION_COEFFICIENTS: dict[str, float] = {
     "f146": 0.4427,
     "f158": 0.3755,
     "f184": 0.2680,
-    "f212": 0.2039,
     "f213": 0.2039,
 }
 
