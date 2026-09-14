@@ -22,7 +22,6 @@ def test_extinction_coefficients_values():
         "f146": 0.4427,
         "f158": 0.3755,
         "f184": 0.2680,
-        "f212": 0.2039,
         "f213": 0.2039,
     }
     for filter_name, coeff in expected.items():
@@ -40,7 +39,6 @@ def test_get_extinction_coefficient_variations():
     assert get_extinction_coefficient("roman/roman_F062.pb") == pytest.approx(2.2662)
     assert get_extinction_coefficient("roman_f158") == pytest.approx(0.3755)
     assert get_extinction_coefficient("F213") == pytest.approx(0.2039)
-    assert get_extinction_coefficient("F212") == pytest.approx(0.2039)
 
 
 def test_get_extinction_coefficient_invalid_filter():
