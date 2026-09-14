@@ -6,7 +6,7 @@ from astropy.table import Table
 from roman_datamodels import datamodels as rdm
 
 from roman_photoz.logger import logger
-from roman_photoz.utils import get_roman_filter_list
+from roman_photoz.utils import get_extinction_coefficient, get_roman_filter_list
 
 
 class RomanCatalogHandler:
@@ -65,14 +65,31 @@ class RomanCatalogHandler:
         if "label" not in self.catalog.dtype.names:
             self.catalog["label"] = self.cat_array["label"]
 
+        has_dust_ebv = "dust_ebv" in self.cat_array.dtype.names
+        if has_dust_ebv:
+            dust_ebv = np.array(self.cat_array["dust_ebv"], dtype=np.float64)
+            dust_ebv = np.nan_to_num(dust_ebv, nan=0.0)
+            logger.info("Applying dust extinction correction using 'dust_ebv'...")
+        else:
+            dust_ebv = None
+            logger.info(
+                "No 'dust_ebv' column found in catalog; skipping dust extinction correction."
+            )
+
         for filter_id in self.filter_names:
             # Roman filter ID in format "fNNN"
             fit_colname = self.fit_colname.format(filter_id)
             fit_err_colname = self.fit_err_colname.format(filter_id)
 
             if fit_colname in self.cat_array.dtype.names:
-                value = np.array(self.cat_array[fit_colname])
-                error = np.array(self.cat_array[fit_err_colname])
+                value = np.array(self.cat_array[fit_colname], dtype=np.float64)
+                error = np.array(self.cat_array[fit_err_colname], dtype=np.float64)
+                if has_dust_ebv:
+                    coeff = get_extinction_coefficient(filter_id)
+                    dered_factor = 10.0 ** (dust_ebv * coeff / 2.5)
+                    valid = error > 0
+                    value = np.where(valid, value * dered_factor, value)
+                    error = np.where(valid, error * dered_factor, error)
             else:
                 # https://lephare.readthedocs.io/en/latest/detailed.html#context
                 # https://lephare.readthedocs.io/en/latest/detailed.html#the-information-needed-for-the-fit
@@ -98,6 +115,9 @@ class RomanCatalogHandler:
             m = self.catalog[fit_err_colname] > 0
             self.catalog[fit_colname][m] *= 10**-32
             self.catalog[fit_err_colname][m] *= 10**-32
+
+        if has_dust_ebv and "dust_ebv" not in self.catalog.dtype.names:
+            self.catalog["dust_ebv"] = self.cat_array["dust_ebv"]
 
         if "redshift" not in self.cat_array.dtype.names:
             self.catalog["redshift"] = np.zeros(len(self.catalog), dtype="f4")

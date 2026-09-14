@@ -69,7 +69,7 @@ def _make_model_portable(model: dict, run_dir: str) -> dict:
     portable = dict(model)
     portable["run_dir"] = run_dir
 
-    lephare_config = portable.get("lephare_config")
+    lephare_config = portable.get("lephare_config") or portable.get("config")
     if isinstance(lephare_config, dict):
         portable_config = dict(lephare_config)
         portable_config["FILTER_REP"] = str(Path(run_dir) / "filt")
@@ -77,6 +77,7 @@ def _make_model_portable(model: dict, run_dir: str) -> dict:
         # on the absolute source path captured during --setup.
         portable_config["PARA_OUT"] = DEFAULT_OUTPUT_KEYWORDS
         portable["lephare_config"] = portable_config
+        portable["config"] = portable_config
 
     return portable
 
