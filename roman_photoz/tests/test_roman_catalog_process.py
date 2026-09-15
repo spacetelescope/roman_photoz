@@ -9,6 +9,7 @@ from astropy.table import Table
 from roman_photoz.default_config_file import default_roman_config
 from roman_photoz.roman_catalog_process import (
     DEFAULT_OUTPUT_KEYWORDS,
+    PHOTOZ_COLUMN_MAP,
     RomanCatalogProcess,
     get_informer_run_dir,
     load_portable_informer_model,
@@ -187,8 +188,10 @@ class TestRomanCatalogProcess:
         # Create RCP instance before patching model existence
         rcp = RomanCatalogProcess(config_filename=default_roman_config)
 
-        # Mock get_data and format_data
-        rcp._get_data = MagicMock(return_value=Table())
+        # Non-empty table so process continues past the empty-catalog short-circuit
+        rcp._get_data = MagicMock(
+            return_value=Table({"label": [1], "segment_f158_flux": [1.0]})
+        )
         rcp._format_data = MagicMock()
         rcp._update_input = MagicMock()
 
@@ -207,8 +210,78 @@ class TestRomanCatalogProcess:
         else:
             mock_create_informer.assert_not_called()
 
-        # Verify create_estimator_stage was always called
+        # Verify create_estimator_stage was always called for non-empty catalogs
         mock_create_estimator.assert_called_once()
+
+    @patch(
+        "roman_photoz.roman_catalog_process.RomanCatalogProcess._create_informer_stage"
+    )
+    @patch(
+        "roman_photoz.roman_catalog_process.RomanCatalogProcess._create_estimator_stage"
+    )
+    @patch("roman_photoz.roman_catalog_process.RomanCatalogProcess._save_results")
+    def test_process_skips_estimator_for_empty_catalog(
+        self,
+        mock_save_results,
+        mock_create_estimator,
+        mock_create_informer,
+    ):
+        """Purpose: empty input catalogs must skip estimation and still save.
+
+        Survey tiles can contain zero detections; roman-photoz should not call
+        LePhare in that case, and should still write empty photo-z columns via
+        _save_results.
+        """
+        rcp = RomanCatalogProcess(config_filename=default_roman_config)
+        rcp._get_data = MagicMock(return_value=Table())
+
+        with patch.object(
+            RomanCatalogProcess,
+            "informer_model_exists",
+            new_callable=PropertyMock,
+            return_value=True,
+        ):
+            rcp.process(input_filename="empty_catalog.parquet")
+
+        mock_create_informer.assert_not_called()
+        mock_create_estimator.assert_not_called()
+        mock_save_results.assert_called_once()
+        assert rcp.estimated is None
+
+    def test_update_input_adds_empty_photoz_columns(self, tmp_path):
+        """Purpose: empty catalogs still receive RAD photo-z columns and metadata."""
+        import pyarrow.parquet as pq
+
+        input_path = tmp_path / "empty_input.parquet"
+        Table(
+            {
+                "label": [],
+                "segment_f158_flux": [],
+                "segment_f158_flux_err": [],
+            }
+        ).write(input_path, format="parquet")
+
+        rcp = RomanCatalogProcess(config_filename=default_roman_config)
+        rcp.input_filename = str(input_path)
+        rcp.data = Table()
+        rcp.estimated = None
+
+        rcp._update_input(str(input_path), save_results=False)
+
+        assert rcp.results.num_rows == 0
+        for col in PHOTOZ_COLUMN_MAP:
+            assert col in rcp.results.column_names
+            assert len(rcp.results[col]) == 0
+            field = rcp.results.schema.field(col)
+            assert field.metadata is not None
+            assert b"description" in field.metadata
+
+        # In-place save path should also succeed
+        rcp._update_input(str(input_path), save_results=True)
+        saved = pq.read_table(input_path)
+        assert saved.num_rows == 0
+        for col in PHOTOZ_COLUMN_MAP:
+            assert col in saved.column_names
 
     @pytest.mark.parametrize(
         "model_filename, env_settings, expected_dirname",

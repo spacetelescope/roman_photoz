@@ -34,6 +34,20 @@ DEFAULT_OUTPUT_KEYWORDS = str(
     files(__package__ + ".data") / "default_roman_output.para"
 )
 
+# Mapping from RAD MultibandSourceCatalog photo-z column names to LePhare
+# ancillary output keys produced by the estimator.
+PHOTOZ_COLUMN_MAP = {
+    "photoz": "Z_BEST",
+    "photoz_high68": "Z_BEST68_HIGH",
+    "photoz_high90": "Z_BEST90_HIGH",
+    "photoz_high99": "Z_BEST99_HIGH",
+    "photoz_low68": "Z_BEST68_LOW",
+    "photoz_low90": "Z_BEST90_LOW",
+    "photoz_low99": "Z_BEST99_LOW",
+    "photoz_gof": "CHI_BEST",
+    "photoz_sed": "MOD_BEST",
+}
+
 
 def get_informer_run_dir(lepharework: Optional[str] = None) -> str:
     """
@@ -342,7 +356,9 @@ class RomanCatalogProcess:
             "parquet",
             "asdf",
         ]:
-            if self.estimated is not None:
+            # Allow saving when estimation ran, or when the input was empty and
+            # we only need to attach empty photo-z columns for schema consistency.
+            if self.estimated is not None or len(self.data) == 0:
                 self._update_input(self.input_filename, save_results=False)
             else:
                 logger.error("No results to save")
@@ -378,18 +394,7 @@ class RomanCatalogProcess:
         # Create a MultibandSourceCatalogModel instance to access RAD schema definitions
         catalog_model = datamodels.MultibandSourceCatalogModel()
 
-        namedict = {
-            "photoz": "Z_BEST",
-            "photoz_high68": "Z_BEST68_HIGH",
-            "photoz_high90": "Z_BEST90_HIGH",
-            "photoz_high99": "Z_BEST99_HIGH",
-            "photoz_low68": "Z_BEST68_LOW",
-            "photoz_low90": "Z_BEST90_LOW",
-            "photoz_low99": "Z_BEST99_LOW",
-            "photoz_gof": "CHI_BEST",
-            "photoz_sed": "MOD_BEST",
-        }
-        for newname, oldname in namedict.items():
+        for newname, oldname in PHOTOZ_COLUMN_MAP.items():
             # Get column definition from RAD schema
             col_def = catalog_model.get_column_definition(newname)
 
@@ -397,8 +402,15 @@ class RomanCatalogProcess:
             # (since all the photoz columns are unitless, we will just set unit to None for now)
             description = col_def.get("description", "")
 
+            if self.estimated is not None:
+                values = self.estimated.data.ancil[oldname]
+            else:
+                # Empty input catalog: attach zero-length photo-z columns so the
+                # output schema stays consistent with non-empty runs.
+                values = np.array([], dtype=np.float64)
+
             # Create PyArrow field with metadata
-            arr = pa.array(self.estimated.data.ancil[oldname])
+            arr = pa.array(values)
             field = pa.field(newname, arr.type, metadata={"description": description})
 
             if newname not in tab.column_names:
@@ -407,7 +419,7 @@ class RomanCatalogProcess:
                 tab = tab.set_column(tab.schema.get_field_index(newname), field, arr)
 
             # Also add to Astropy table with metadata
-            tab_astro[newname] = self.estimated.data.ancil[oldname]
+            tab_astro[newname] = values
             tab_astro[newname].info.description = description
 
             logger.info(
@@ -457,6 +469,15 @@ class RomanCatalogProcess:
             fit_colname=fit_colname,
             fit_err_colname=fit_err_colname,
         )
+
+        if len(self.data) == 0:
+            logger.info(
+                f"Input catalog '{self.input_filename}' contains 0 sources. "
+                "Skipping estimator stage and writing empty photo-z columns."
+            )
+            self.estimated = None
+            self._save_results()
+            return
 
         if not self.informer_model_exists:
             print(
